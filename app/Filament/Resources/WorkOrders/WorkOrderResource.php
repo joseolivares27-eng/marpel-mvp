@@ -4,6 +4,8 @@ namespace App\Filament\Resources\WorkOrders;
 
 use App\Filament\Resources\WorkOrders\Pages\ManageWorkOrders;
 use App\Models\Material;
+use App\Models\Notice;
+use App\Models\Review;
 use App\Models\WorkOrder;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -15,10 +17,13 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\Str;
 
 class WorkOrderResource extends Resource
 {
@@ -37,6 +42,38 @@ class WorkOrderResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
+            Tabs::make('Origen del parte')
+                ->tabs([
+                    Tab::make('Aviso')
+                        ->schema([
+                            Select::make('notice_id')
+                                ->label('Aviso origen')
+                                ->relationship('notice', 'description')
+                                ->getOptionLabelFromRecordUsing(fn (Notice $record): string => self::noticeLabel($record))
+                                ->searchable(['description', 'reported_by', 'contact_name', 'contact_phone'])
+                                ->preload()
+                                ->live()
+                                ->afterStateUpdated(function (?int $state, Set $set): void {
+                                    self::fillFromNotice($state, $set);
+                                }),
+                        ]),
+                    Tab::make('Revision')
+                        ->schema([
+                            Select::make('review_id')
+                                ->label('Revision origen')
+                                ->relationship('review', 'id')
+                                ->getOptionLabelFromRecordUsing(fn (Review $record): string => self::reviewLabel($record))
+                                ->searchable(['type', 'status', 'result'])
+                                ->preload()
+                                ->live()
+                                ->afterStateUpdated(function (?int $state, Set $set): void {
+                                    self::fillFromReview($state, $set);
+                                }),
+                        ]),
+                ])
+                ->persistTab()
+                ->id('work-order-origin-tabs')
+                ->columnSpanFull(),
             Select::make('customer_id')->label('Cliente')->relationship('customer', 'legal_name')->searchable()->preload()->required(),
             Select::make('installation_id')->label('Instalacion')->relationship('installation', 'name')->searchable()->preload()->required(),
             Select::make('equipment_id')->label('Equipo')->relationship('equipment', 'name')->searchable()->preload(),
@@ -45,7 +82,6 @@ class WorkOrderResource extends Resource
                 ->label('Descripcion / trabajo solicitado')
                 ->placeholder('Ej. puerta abierta, no abre, mandos no funcionan, hace ruido...')
                 ->columnSpanFull(),
-            Select::make('review_id')->label('Revision')->relationship('review', 'id')->searchable()->preload(),
             Select::make('quote_id')->label('Presupuesto')->relationship('quote', 'number')->searchable()->preload(),
             Select::make('status')->label('Estado')->options([
                 'open' => 'Abierto',
@@ -53,8 +89,8 @@ class WorkOrderResource extends Resource
                 'closed' => 'Cerrado',
                 'cancelled' => 'Cancelado',
             ])->default('open')->required(),
-            DateTimePicker::make('started_at')->label('Inicio'),
-            DateTimePicker::make('finished_at')->label('Fin'),
+            DateTimePicker::make('started_at')->label('Fecha inicio'),
+            DateTimePicker::make('finished_at')->label('Fecha fin'),
             Select::make('result')->label('Resultado')->options([
                 'solved' => 'Solucionado',
                 'pending_material' => 'Pendiente material',
@@ -123,6 +159,62 @@ class WorkOrderResource extends Resource
                     DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    private static function fillFromNotice(?int $noticeId, Set $set): void
+    {
+        if (! $noticeId) {
+            return;
+        }
+
+        $notice = Notice::query()->find($noticeId);
+
+        if (! $notice) {
+            return;
+        }
+
+        $set('review_id', null);
+        $set('customer_id', $notice->customer_id);
+        $set('installation_id', $notice->installation_id);
+        $set('equipment_id', $notice->equipment_id);
+        $set('assigned_user_id', $notice->assigned_user_id);
+        $set('observations', $notice->description);
+        $set('status', 'open');
+    }
+
+    private static function fillFromReview(?int $reviewId, Set $set): void
+    {
+        if (! $reviewId) {
+            return;
+        }
+
+        $review = Review::query()->find($reviewId);
+
+        if (! $review) {
+            return;
+        }
+
+        $set('notice_id', null);
+        $set('customer_id', $review->customer_id);
+        $set('installation_id', $review->installation_id);
+        $set('equipment_id', $review->equipment_id);
+        $set('assigned_user_id', $review->assigned_user_id);
+        $set('observations', $review->notes ?: 'Revision programada');
+        $set('status', 'open');
+    }
+
+    private static function noticeLabel(Notice $notice): string
+    {
+        return Str::limit(($notice->installation?->name ?: 'Instalacion').' - '.$notice->description, 90);
+    }
+
+    private static function reviewLabel(Review $review): string
+    {
+        $date = $review->scheduled_at?->format('d/m/Y H:i') ?: 'Sin fecha';
+        $installation = $review->installation?->name ?: 'Instalacion';
+        $equipment = $review->equipment?->name ?: 'Equipo';
+
+        return Str::limit("{$date} - {$installation} - {$equipment}", 90);
     }
 
     /**

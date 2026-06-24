@@ -3,9 +3,12 @@
 namespace App\Filament\Resources\WorkOrders\Pages;
 
 use App\Filament\Resources\WorkOrders\WorkOrderResource;
+use App\Models\WorkOrder;
 use Filament\Actions\CreateAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ManageRecords;
+use Filament\Schemas\Components\Tabs\Tab;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -13,6 +16,23 @@ use Throwable;
 class ManageWorkOrders extends ManageRecords
 {
     protected static string $resource = WorkOrderResource::class;
+
+    public function getTabs(): array
+    {
+        return [
+            'avisos' => Tab::make('Avisos')
+                ->modifyQueryUsing(fn (Builder $query): Builder => $query->whereNotNull('notice_id'))
+                ->badge(fn (): int => WorkOrder::query()->whereNotNull('notice_id')->count()),
+            'revisiones' => Tab::make('Revisiones')
+                ->modifyQueryUsing(fn (Builder $query): Builder => $query->whereNotNull('review_id'))
+                ->badge(fn (): int => WorkOrder::query()->whereNotNull('review_id')->count()),
+        ];
+    }
+
+    public function getDefaultActiveTab(): string | int | null
+    {
+        return 'avisos';
+    }
 
     protected function getHeaderActions(): array
     {
