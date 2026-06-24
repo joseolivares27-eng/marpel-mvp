@@ -39,7 +39,10 @@ class WorkOrderResource extends Resource
             Select::make('installation_id')->label('Instalacion')->relationship('installation', 'name')->searchable()->preload()->required(),
             Select::make('equipment_id')->label('Equipo')->relationship('equipment', 'name')->searchable()->preload(),
             Select::make('assigned_user_id')->label('Tecnico')->relationship('technician', 'name')->searchable()->preload(),
-            Select::make('notice_id')->label('Aviso')->relationship('notice', 'id')->searchable()->preload(),
+            Textarea::make('observations')
+                ->label('Descripcion / trabajo solicitado')
+                ->placeholder('Ej. puerta abierta, no abre, mandos no funcionan, hace ruido...')
+                ->columnSpanFull(),
             Select::make('review_id')->label('Revision')->relationship('review', 'id')->searchable()->preload(),
             Select::make('quote_id')->label('Presupuesto')->relationship('quote', 'number')->searchable()->preload(),
             Select::make('status')->label('Estado')->options([
@@ -57,7 +60,6 @@ class WorkOrderResource extends Resource
                 'not_located' => 'No localizado',
             ]),
             Textarea::make('work_performed')->label('Trabajo realizado')->columnSpanFull(),
-            Textarea::make('observations')->label('Observaciones')->columnSpanFull(),
             Repeater::make('materials')->label('Materiales')->relationship()->schema([
                 Select::make('material_id')->label('Material catalogo')->relationship('material', 'name')->searchable()->preload(),
                 TextInput::make('description')->label('Descripcion')->required(),
