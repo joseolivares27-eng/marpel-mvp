@@ -1,0 +1,17 @@
+{
+    "name": "Automatismos Marpel",
+    "short_name": "Marpel",
+    "start_url": "/tecnico",
+    "display": "standalone",
+    "background_color": "#f6f8fb",
+    "theme_color": "#0f62fe",
+    "orientation": "portrait",
+    "icons": [
+        {
+            "src": "/icons/marpel.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ]
+}

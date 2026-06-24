@@ -1,0 +1,34 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "80:80"
+    volumes:
+      - app_storage:/var/www/html/storage
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: marpel
+      POSTGRES_USER: marpel
+      POSTGRES_PASSWORD: marpel_secret
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U marpel -d marpel"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  app_storage:
+  db_data:
