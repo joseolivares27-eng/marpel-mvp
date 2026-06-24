@@ -69,6 +69,72 @@ Los usuarios de administracion y gerencia pueden entrar al panel Filament. Los t
 
 El formulario guarda borradores de texto en `localStorage` para reducir perdidas cuando hay poca cobertura.
 
+## API Lucas / WhatsApp
+
+Endpoint para crear avisos desde Lucas:
+
+```text
+POST /api/lucas/avisos
+```
+
+Seguridad:
+
+```http
+X-MARPEL-API-TOKEN: valor_de_MARPEL_API_TOKEN
+```
+
+Configurar en `.env`:
+
+```env
+MARPEL_API_TOKEN=pon-un-token-largo-y-secreto
+```
+
+Ejemplo:
+
+```bash
+curl -X POST "https://tu-dominio.com/api/lucas/avisos" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -H "X-MARPEL-API-TOKEN: pon-un-token-largo-y-secreto" \
+  -d '{
+    "nombre_cliente": "Comunidad Santa Teresa",
+    "telefono": "600100100",
+    "email": "presidente@example.com",
+    "direccion": "Calle Santa Teresa 12, Almeria",
+    "descripcion": "La puerta del garaje no abre desde los mandos.",
+    "persona_contacto": "Antonio Garcia",
+    "origen": "whatsapp",
+    "prioridad": "urgent",
+    "tipo_cliente": "abonado",
+    "equipo_tipo": "Puerta automatica",
+    "notas": "Cliente esperando en la entrada."
+  }'
+```
+
+Respuesta correcta:
+
+```json
+{
+  "success": true,
+  "aviso_id": 1,
+  "cliente_id": 1,
+  "instalacion_id": 1,
+  "mensaje": "Aviso creado correctamente desde Lucas."
+}
+```
+
+Funcionamiento:
+
+- Busca primero una instalacion por direccion normalizada.
+- Si existe la instalacion, usa esa instalacion y su cliente asociado.
+- Si no existe la instalacion, busca cliente por `nombre_cliente` cuando venga informado.
+- Si no existe cliente, crea cliente como `prospect`.
+- Crea una nueva instalacion con la direccion.
+- Crea aviso en estado `pending`.
+- No sobrescribe el telefono principal del cliente con el telefono recibido.
+- Guarda el telefono recibido como contacto del aviso.
+- Guarda origen, prioridad, persona de contacto, telefono, notas y descripcion completa con datos de WhatsApp/Lucas.
+
 ## Despliegue VPS Linux
 
 1. Instalar Docker y Docker Compose.
@@ -79,6 +145,7 @@ El formulario guarda borradores de texto en `localStorage` para reducir perdidas
    - `APP_DEBUG=false`
    - `APP_URL=https://tu-dominio.com`
    - `DB_PASSWORD=...`
+   - `MARPEL_API_TOKEN=...`
 5. Ejecutar:
 
 ```bash
