@@ -1,3 +1,35 @@
+@php
+    $noticeStatusLabels = [
+        'pending' => 'Pendiente',
+        'assigned' => 'Asignado',
+        'in_progress' => 'En curso',
+        'completed' => 'Realizado',
+        'resolved' => 'Realizado',
+        'pending_quote' => 'Pendiente',
+        'cancelled' => 'Cancelado',
+    ];
+
+    $workOrderStatusLabels = [
+        'new' => 'Abierto',
+        'open' => 'Abierto',
+        'in_progress' => 'En curso',
+        'closed' => 'Cerrado',
+        'cancelled' => 'Cancelado',
+    ];
+
+    $workOrderResultLabels = [
+        'solucionado' => 'Solucionado',
+        'pendiente' => 'Pendiente',
+        'no_solucionado' => 'No solucionado',
+        'solved' => 'Solucionado',
+        'ok' => 'Solucionado',
+        'pending_material' => 'Pendiente',
+        'requires_quote' => 'Pendiente',
+        'not_located' => 'No solucionado',
+        'incident' => 'No solucionado',
+    ];
+@endphp
+
 <x-filament-panels::page>
     <x-filament::section>
         <x-slot name="heading">{{ $record->code }} · {{ $record->name }}</x-slot>
@@ -17,7 +49,7 @@
             <div class="space-y-3 text-sm">
                 @forelse ($record->notices->sortByDesc('created_at') as $notice)
                     <div class="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-                        <strong>{{ $notice->created_at->format('d/m/Y') }}</strong> · {{ $notice->priority }} · {{ $notice->status }}
+                        <strong>{{ $notice->created_at->format('d/m/Y') }}</strong> · {{ $notice->priority }} · {{ $noticeStatusLabels[$notice->status] ?? $notice->status }}
                         <p>{{ $notice->description }}</p>
                     </div>
                 @empty
@@ -46,7 +78,7 @@
         <div class="space-y-4 text-sm">
             @forelse ($record->workOrders->sortByDesc('created_at') as $workOrder)
                 <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
-                    <div><strong>Parte #{{ $workOrder->id }}</strong> · {{ $workOrder->status }} · {{ $workOrder->finished_at?->format('d/m/Y H:i') ?? 'Abierto' }}</div>
+                    <div><strong>Parte #{{ $workOrder->id }}</strong> · {{ $workOrderStatusLabels[$workOrder->status] ?? $workOrder->status }} · {{ $workOrderResultLabels[$workOrder->result] ?? 'Pendiente' }} · {{ $workOrder->finished_at?->format('d/m/Y H:i') ?? 'Abierto' }}</div>
                     <p>{{ $workOrder->work_performed ?: $workOrder->observations }}</p>
                     @if ($workOrder->materials->isNotEmpty())
                         <div class="mt-2">

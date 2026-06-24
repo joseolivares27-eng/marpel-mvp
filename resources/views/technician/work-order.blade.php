@@ -1,10 +1,22 @@
 <x-layouts.mobile :heading="'Parte #'.$workOrder->id" :subheading="$workOrder->installation->name">
     @php
-        $defaultResult = old('result', $workOrder->result ?: ($workOrder->review ? 'ok' : 'solved'));
+        $resultLabels = [
+            'solucionado' => 'solucionado',
+            'solved' => 'solucionado',
+            'ok' => 'solucionado',
+            'no_solucionado' => 'no_solucionado',
+            'not_located' => 'no_solucionado',
+            'incident' => 'no_solucionado',
+            'pending_material' => 'pendiente',
+            'requires_quote' => 'pendiente',
+            'pendiente' => 'pendiente',
+        ];
+        $defaultResult = old('result', $resultLabels[$workOrder->result] ?? 'pendiente');
         $phone = $workOrder->notice?->contact_phone ?: $workOrder->installation->contact_phone;
         $originLabel = $workOrder->notice ? 'Aviso' : ($workOrder->review ? 'Revision' : 'Manual');
         $statusLabels = [
-            'new' => 'Nuevo',
+            'new' => 'Abierto',
+            'open' => 'Abierto',
             'in_progress' => 'En curso',
             'closed' => 'Cerrado',
             'cancelled' => 'Cancelado',
@@ -27,7 +39,7 @@
 
     <section class="route-hero {{ $workOrder->notice?->priority === 'urgent' ? 'urgent' : '' }}">
         <div class="badge-row">
-            <span class="badge {{ $workOrder->status === 'new' ? 'danger' : 'success' }}">{{ $statusLabels[$workOrder->status] ?? $workOrder->status }}</span>
+            <span class="badge {{ in_array($workOrder->status, ['new', 'open'], true) ? 'danger' : 'success' }}">{{ $statusLabels[$workOrder->status] ?? $workOrder->status }}</span>
             <span class="badge neutral">{{ $originLabel }}</span>
             @if ($workOrder->customer_signature_path)
                 <span class="badge success">Firmado</span>
@@ -90,12 +102,9 @@
                 <label for="result">Resultado</label>
                 <select id="result" name="result" class="select">
                     @foreach ([
-                        'solved' => 'Solucionado',
-                        'pending_material' => 'Pendiente material',
-                        'requires_quote' => 'Requiere presupuesto',
-                        'not_located' => 'No localizado',
-                        'ok' => 'Revision correcta',
-                        'incident' => 'Incidencia revision',
+                        'solucionado' => 'Solucionado',
+                        'pendiente' => 'Pendiente',
+                        'no_solucionado' => 'No solucionado',
                     ] as $value => $label)
                         <option value="{{ $value }}" @selected($defaultResult === $value)>{{ $label }}</option>
                     @endforeach

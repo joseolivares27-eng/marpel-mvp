@@ -4,9 +4,19 @@
     use App\Models\WorkOrder;
     use App\Models\User;
 
+    $noticeStatusLabels = [
+        'pending' => 'Pendiente',
+        'assigned' => 'Asignado',
+        'in_progress' => 'En curso',
+        'completed' => 'Realizado',
+        'resolved' => 'Realizado',
+        'pending_quote' => 'Pendiente',
+        'cancelled' => 'Cancelado',
+    ];
+
     $pendingNotices = Notice::whereIn('status', ['pending', 'assigned', 'in_progress', 'pending_quote'])->count();
     $upcomingReviews = Review::whereIn('status', ['scheduled', 'assigned', 'in_progress'])->where('scheduled_at', '<=', now()->addDays(14))->count();
-    $openWorkOrders = WorkOrder::whereIn('status', ['new', 'in_progress'])->count();
+    $openWorkOrders = WorkOrder::whereIn('status', ['new', 'open', 'in_progress'])->count();
     $toInvoice = WorkOrder::where('status', 'closed')->whereDoesntHave('invoiceLines')->count();
     $urgentNotices = Notice::with(['customer', 'installation', 'equipment', 'technician'])
         ->whereIn('status', ['pending', 'assigned', 'in_progress'])
@@ -48,7 +58,7 @@
                                 <div class="font-semibold">{{ $notice->installation->name }}</div>
                                 <div class="text-sm text-gray-500">{{ $notice->customer->legal_name }} · {{ $notice->equipment?->name ?? 'Sin equipo concreto' }}</div>
                             </div>
-                            <div class="text-sm font-medium uppercase">{{ $notice->priority }} · {{ $notice->status }}</div>
+                            <div class="text-sm font-medium uppercase">{{ $notice->priority }} · {{ $noticeStatusLabels[$notice->status] ?? $notice->status }}</div>
                         </div>
                         <p class="mt-2 text-sm">{{ $notice->description }}</p>
                         <div class="mt-2 text-sm text-gray-500">Tecnico: {{ $notice->technician?->name ?? 'Sin asignar' }}</div>

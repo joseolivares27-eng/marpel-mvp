@@ -2,13 +2,23 @@
     use App\Models\Notice;
     use App\Models\Review;
 
+    $noticeStatusLabels = [
+        'pending' => 'Pendiente',
+        'assigned' => 'Asignado',
+        'in_progress' => 'En curso',
+        'completed' => 'Realizado',
+        'resolved' => 'Realizado',
+        'pending_quote' => 'Pendiente',
+        'cancelled' => 'Cancelado',
+    ];
+
     $items = collect()
         ->merge(Notice::with(['installation', 'technician'])->whereNotNull('scheduled_at')->whereDate('scheduled_at', '>=', now()->toDateString())->limit(30)->get()->map(fn ($notice) => [
             'time' => $notice->scheduled_at,
             'type' => 'Aviso',
             'installation' => $notice->installation->name,
             'technician' => $notice->technician?->name ?? 'Sin asignar',
-            'status' => $notice->status,
+            'status' => $noticeStatusLabels[$notice->status] ?? $notice->status,
         ]))
         ->merge(Review::with(['installation', 'technician'])->whereDate('scheduled_at', '>=', now()->toDateString())->limit(30)->get()->map(fn ($review) => [
             'time' => $review->scheduled_at,

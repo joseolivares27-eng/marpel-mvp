@@ -59,6 +59,7 @@ class WorkOrderService
                     'equipment_id' => $notice->equipment_id,
                     'assigned_user_id' => $technician->id,
                     'status' => 'new',
+                    'result' => 'pendiente',
                     'observations' => $notice->description,
                 ],
             );
@@ -66,6 +67,7 @@ class WorkOrderService
             $workOrder->update([
                 'assigned_user_id' => $technician->id,
                 'status' => $workOrder->status === 'closed' ? 'closed' : 'new',
+                'result' => $workOrder->result ?: 'pendiente',
             ]);
 
             $notice->update([
@@ -92,6 +94,7 @@ class WorkOrderService
                     'equipment_id' => $review->equipment_id,
                     'assigned_user_id' => $technician->id,
                     'status' => 'new',
+                    'result' => 'pendiente',
                     'observations' => $review->notes ?: 'Revision programada',
                 ],
             );
@@ -99,6 +102,7 @@ class WorkOrderService
             $workOrder->update([
                 'assigned_user_id' => $technician->id,
                 'status' => $workOrder->status === 'closed' ? 'closed' : 'new',
+                'result' => $workOrder->result ?: 'pendiente',
             ]);
 
             $review->update([
@@ -159,7 +163,8 @@ class WorkOrderService
             }
 
             $wasClosed = $workOrder->status === 'closed';
-            $result = $this->normalizeResult($workOrder, $data['result'] ?? null);
+            $rawResult = $data['result'] ?? null;
+            $result = $this->normalizeResult($rawResult);
 
             if ($materials !== []) {
                 $this->saveMaterials($workOrder, $materials);
@@ -179,9 +184,9 @@ class WorkOrderService
 
             if ($workOrder->notice) {
                 $workOrder->notice->update([
-                    'status' => $result === 'requires_quote' ? 'pending_quote' : 'resolved',
+                    'status' => $rawResult === 'requires_quote' ? 'pending_quote' : 'completed',
                     'closed_at' => now(),
-                    'requires_quote' => $result === 'requires_quote',
+                    'requires_quote' => $rawResult === 'requires_quote',
                 ]);
             }
 
@@ -192,7 +197,7 @@ class WorkOrderService
                     notes: $data['observations'] ?? null,
                 );
 
-                if ($result === 'incident') {
+                if ($rawResult === 'incident') {
                     Notice::create([
                         'customer_id' => $workOrder->customer_id,
                         'installation_id' => $workOrder->installation_id,
@@ -206,7 +211,7 @@ class WorkOrderService
                 }
             }
 
-            if ($result === 'requires_quote') {
+            if ($rawResult === 'requires_quote') {
                 $origin = array_filter([
                     'notice_id' => $workOrder->notice_id,
                     'review_id' => $workOrder->review_id,
@@ -280,13 +285,13 @@ class WorkOrderService
         }
     }
 
-    private function normalizeResult(WorkOrder $workOrder, ?string $result): string
+    private function normalizeResult(?string $result): string
     {
-        if ($workOrder->review_id && (! $result || $result === 'solved')) {
-            return 'ok';
-        }
-
-        return $result ?: 'solved';
+        return match ($result) {
+            'solucionado', 'solved', 'ok' => 'solucionado',
+            'no_solucionado', 'not_located', 'incident' => 'no_solucionado',
+            default => 'pendiente',
+        };
     }
 
     private function nextQuoteNumber(): string

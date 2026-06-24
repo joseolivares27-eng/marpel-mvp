@@ -6,10 +6,14 @@
         $focusPhone = null;
         $focusIsUrgent = false;
         $statusLabels = [
-            'new' => 'Nuevo',
+            'new' => 'Abierto',
+            'open' => 'Abierto',
             'in_progress' => 'En curso',
             'pending' => 'Pendiente',
             'assigned' => 'Asignado',
+            'completed' => 'Realizado',
+            'resolved' => 'Realizado',
+            'cancelled' => 'Cancelado',
             'scheduled' => 'Programada',
         ];
     @endphp
@@ -71,7 +75,7 @@
             </div>
             <div class="primary-action-grid">
                 <a class="button success full" href="{{ route('technician.work-orders.show', $nextWorkOrder) }}">
-                    {{ $nextWorkOrder->status === 'new' ? 'Abrir parte' : 'Continuar parte' }}
+                    {{ in_array($nextWorkOrder->status, ['new', 'open'], true) ? 'Abrir parte' : 'Continuar parte' }}
                 </a>
             </div>
         </section>
@@ -195,12 +199,12 @@
     @forelse ($workOrders as $workOrder)
         <article class="job-card">
             <div class="badge-row">
-                <span class="badge {{ $workOrder->status === 'new' ? 'danger' : 'success' }}">{{ $statusLabels[$workOrder->status] ?? $workOrder->status }}</span>
+                <span class="badge {{ in_array($workOrder->status, ['new', 'open'], true) ? 'danger' : 'success' }}">{{ $statusLabels[$workOrder->status] ?? $workOrder->status }}</span>
                 <span class="badge neutral">Parte #{{ $workOrder->id }}</span>
             </div>
             <h3>{{ $workOrder->installation->name }}</h3>
             <p class="job-meta">{{ $workOrder->equipment?->code }} {{ $workOrder->equipment?->name ?? 'Sin equipo concreto' }}</p>
-            <a class="button full" href="{{ route('technician.work-orders.show', $workOrder) }}">{{ $workOrder->status === 'new' ? 'Abrir parte' : 'Continuar parte' }}</a>
+            <a class="button full" href="{{ route('technician.work-orders.show', $workOrder) }}">{{ in_array($workOrder->status, ['new', 'open'], true) ? 'Abrir parte' : 'Continuar parte' }}</a>
         </article>
     @empty
         <p class="empty-state">No hay partes abiertos.</p>

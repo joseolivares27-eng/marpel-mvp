@@ -84,21 +84,30 @@ class WorkOrderResource extends Resource
                 ->columnSpanFull(),
             Select::make('quote_id')->label('Presupuesto')->relationship('quote', 'number')->searchable()->preload(),
             Select::make('status')->label('Estado')->options([
-                'new' => 'Nuevo',
+                'new' => 'Abierto',
                 'in_progress' => 'En curso',
                 'closed' => 'Cerrado',
                 'cancelled' => 'Cancelado',
-            ])->default('new')->required(),
+            ])
+                ->default('new')
+                ->afterStateHydrated(function (Select $component, ?string $state): void {
+                    if ($state === 'open') {
+                        $component->state('new');
+                    }
+                })
+                ->required(),
             DateTimePicker::make('started_at')->label('Fecha inicio'),
             DateTimePicker::make('finished_at')->label('Fecha fin'),
             Select::make('result')->label('Resultado')->options([
-                'solved' => 'Solucionado',
-                'pending_material' => 'Pendiente material',
-                'requires_quote' => 'Requiere presupuesto',
-                'not_located' => 'No localizado',
-                'ok' => 'Revision correcta',
-                'incident' => 'Incidencia revision',
-            ]),
+                'solucionado' => 'Solucionado',
+                'pendiente' => 'Pendiente',
+                'no_solucionado' => 'No solucionado',
+            ])
+                ->default('pendiente')
+                ->afterStateHydrated(function (Select $component, ?string $state): void {
+                    $component->state(self::normalizeResultState($state));
+                })
+                ->required(),
             Textarea::make('work_performed')->label('Trabajo realizado')->columnSpanFull(),
             Repeater::make('materials')->label('Materiales')->relationship()->schema([
                 Select::make('material_id')
@@ -146,7 +155,8 @@ class WorkOrderResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('id')->label('Parte')->sortable(),
-                TextColumn::make('status')->label('Estado')->badge()->sortable(),
+                TextColumn::make('status')->label('Estado')->badge()->formatStateUsing(fn (?string $state): string => self::statusLabel($state))->sortable(),
+                TextColumn::make('result')->label('Resultado')->badge()->formatStateUsing(fn (?string $state): string => self::resultLabel($state))->sortable(),
                 TextColumn::make('customer.legal_name')->label('Cliente')->searchable(),
                 TextColumn::make('installation.name')->label('Instalacion')->searchable(),
                 TextColumn::make('equipment.name')->label('Equipo')->searchable(),
@@ -182,6 +192,7 @@ class WorkOrderResource extends Resource
         $set('assigned_user_id', $notice->assigned_user_id);
         $set('observations', $notice->description);
         $set('status', 'new');
+        $set('result', 'pendiente');
     }
 
     private static function fillFromReview(?int $reviewId, Set $set): void
@@ -203,6 +214,42 @@ class WorkOrderResource extends Resource
         $set('assigned_user_id', $review->assigned_user_id);
         $set('observations', $review->notes ?: 'Revision programada');
         $set('status', 'new');
+        $set('result', 'pendiente');
+    }
+
+    private static function statusLabel(?string $state): string
+    {
+        return [
+            'new' => 'Abierto',
+            'open' => 'Abierto',
+            'in_progress' => 'En curso',
+            'closed' => 'Cerrado',
+            'cancelled' => 'Cancelado',
+        ][$state] ?? ($state ?: 'Abierto');
+    }
+
+    private static function resultLabel(?string $state): string
+    {
+        return [
+            'solucionado' => 'Solucionado',
+            'pendiente' => 'Pendiente',
+            'no_solucionado' => 'No solucionado',
+            'solved' => 'Solucionado',
+            'ok' => 'Solucionado',
+            'pending_material' => 'Pendiente',
+            'requires_quote' => 'Pendiente',
+            'not_located' => 'No solucionado',
+            'incident' => 'No solucionado',
+        ][$state] ?? 'Pendiente';
+    }
+
+    private static function normalizeResultState(?string $state): string
+    {
+        return match ($state) {
+            'solucionado', 'solved', 'ok' => 'solucionado',
+            'no_solucionado', 'not_located', 'incident' => 'no_solucionado',
+            default => 'pendiente',
+        };
     }
 
     private static function noticeLabel(Notice $notice): string

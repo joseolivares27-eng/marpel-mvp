@@ -21,7 +21,7 @@ class TechnicianController extends Controller
 
         $notices = Notice::with(['customer', 'installation', 'equipment'])
             ->where('assigned_user_id', $user->id)
-            ->whereNotIn('status', ['resolved', 'cancelled'])
+            ->whereNotIn('status', ['completed', 'resolved', 'cancelled'])
             ->orderByRaw("case when priority = 'urgent' then 0 else 1 end")
             ->orderBy('scheduled_at')
             ->get();
@@ -34,7 +34,7 @@ class TechnicianController extends Controller
 
         $workOrders = WorkOrder::with(['installation', 'equipment', 'notice', 'review'])
             ->where('assigned_user_id', $user->id)
-            ->whereIn('status', ['new', 'in_progress'])
+            ->whereIn('status', ['new', 'open', 'in_progress'])
             ->latest('started_at')
             ->get();
 
@@ -77,7 +77,7 @@ class TechnicianController extends Controller
     {
         $this->ensureTechnicianCanSee($request, $workOrder->assigned_user_id);
 
-        if ($workOrder->status === 'new') {
+        if (in_array($workOrder->status, ['new', 'open'], true)) {
             $workOrder = $service->open($workOrder, $request->user());
         }
 
@@ -99,7 +99,7 @@ class TechnicianController extends Controller
         $validated = $request->validate([
             'work_performed' => ['nullable', 'string'],
             'observations' => ['nullable', 'string'],
-            'result' => ['nullable', 'string', 'in:solved,pending_material,requires_quote,not_located,ok,incident'],
+            'result' => ['nullable', 'string', 'in:solucionado,pendiente,no_solucionado'],
             'materials' => ['array'],
             'materials.*.material_id' => ['nullable', 'integer', 'exists:materials,id'],
             'materials.*.description' => ['nullable', 'string', 'max:255'],
@@ -120,7 +120,7 @@ class TechnicianController extends Controller
             'status' => $workOrder->status === 'closed' ? 'closed' : 'in_progress',
             'work_performed' => $validated['work_performed'] ?? null,
             'observations' => $validated['observations'] ?? null,
-            'result' => $validated['result'] ?? null,
+            'result' => $validated['result'] ?? 'pendiente',
         ]);
 
         $service->saveMaterials($workOrder, $validated['materials'] ?? []);
@@ -181,7 +181,7 @@ class TechnicianController extends Controller
         $service->close($workOrder, [
             'work_performed' => $workOrder->work_performed,
             'observations' => $workOrder->observations,
-            'result' => $workOrder->result ?: ($workOrder->review_id ? 'ok' : 'solved'),
+            'result' => $workOrder->result ?: 'pendiente',
         ]);
 
         return redirect()->route('technician.dashboard')->with('status', 'Parte firmado y cerrado.');

@@ -60,10 +60,20 @@ class NoticeResource extends Resource
                 'pending' => 'Pendiente',
                 'assigned' => 'Asignado',
                 'in_progress' => 'En curso',
-                'pending_quote' => 'Pendiente presupuesto',
-                'resolved' => 'Resuelto',
+                'completed' => 'Realizado',
                 'cancelled' => 'Cancelado',
-            ])->default('pending')->required(),
+            ])
+                ->default('pending')
+                ->afterStateHydrated(function (Select $component, ?string $state): void {
+                    if ($state === 'resolved') {
+                        $component->state('completed');
+                    }
+
+                    if ($state === 'pending_quote') {
+                        $component->state('pending');
+                    }
+                })
+                ->required(),
             Select::make('assigned_user_id')->label('Tecnico')->relationship('technician', 'name')->searchable()->preload(),
             DateTimePicker::make('scheduled_at')->label('Planificado'),
             Toggle::make('requires_quote')->label('Requiere presupuesto'),
@@ -76,7 +86,7 @@ class NoticeResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('priority')->label('Prioridad')->badge()->sortable(),
-                TextColumn::make('status')->label('Estado')->badge()->sortable(),
+                TextColumn::make('status')->label('Estado')->badge()->formatStateUsing(fn (?string $state): string => self::statusLabel($state))->sortable(),
                 TextColumn::make('customer.legal_name')->label('Cliente')->searchable(),
                 TextColumn::make('installation.name')->label('Instalacion')->searchable(),
                 TextColumn::make('equipment.name')->label('Equipo')->searchable(),
@@ -111,7 +121,7 @@ class NoticeResource extends Resource
                             ->body('El tecnico ya tiene el parte en su PWA.')
                             ->send();
                     })
-                    ->hidden(fn (Notice $record): bool => $record->workOrder()->exists() || in_array($record->status, ['resolved', 'cancelled'], true)),
+                    ->hidden(fn (Notice $record): bool => $record->workOrder()->exists() || in_array($record->status, ['completed', 'resolved', 'cancelled'], true)),
                 EditAction::make(),
             ])
             ->toolbarActions([
@@ -126,5 +136,18 @@ class NoticeResource extends Resource
         return [
             'index' => ManageNotices::route('/'),
         ];
+    }
+
+    private static function statusLabel(?string $state): string
+    {
+        return [
+            'pending' => 'Pendiente',
+            'assigned' => 'Asignado',
+            'in_progress' => 'En curso',
+            'completed' => 'Realizado',
+            'resolved' => 'Realizado',
+            'pending_quote' => 'Pendiente',
+            'cancelled' => 'Cancelado',
+        ][$state] ?? ($state ?: 'Pendiente');
     }
 }

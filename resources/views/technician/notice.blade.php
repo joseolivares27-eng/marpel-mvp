@@ -6,7 +6,22 @@
             'pending' => 'Pendiente',
             'assigned' => 'Asignado',
             'in_progress' => 'En curso',
-            'pending_quote' => 'Pendiente presupuesto',
+            'completed' => 'Realizado',
+            'resolved' => 'Realizado',
+            'pending_quote' => 'Pendiente',
+            'cancelled' => 'Cancelado',
+        ];
+
+        $workOrderResultLabels = [
+            'solucionado' => 'Solucionado',
+            'pendiente' => 'Pendiente',
+            'no_solucionado' => 'No solucionado',
+            'solved' => 'Solucionado',
+            'ok' => 'Solucionado',
+            'pending_material' => 'Pendiente',
+            'requires_quote' => 'Pendiente',
+            'not_located' => 'No solucionado',
+            'incident' => 'No solucionado',
         ];
     @endphp
 
@@ -70,7 +85,7 @@
                 @forelse ($notice->equipment->workOrders as $history)
                     <div class="history-item">
                         <strong>{{ $history->finished_at?->format('d/m/Y') ?? 'Sin fecha' }}</strong>
-                        <span>{{ $history->work_performed ?: $history->result ?: 'Parte sin descripcion.' }}</span>
+                        <span>{{ $history->work_performed ?: ($workOrderResultLabels[$history->result] ?? 'Parte sin descripcion.') }}</span>
                     </div>
                 @empty
                     <p class="job-meta">Sin partes anteriores.</p>
