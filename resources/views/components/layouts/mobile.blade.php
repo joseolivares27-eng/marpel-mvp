@@ -32,7 +32,7 @@
 
     <main class="mobile-shell">
         <header class="topbar">
-            <div style="display:flex;align-items:center;gap:10px">
+            <div class="topbar-brand">
                 <div class="brand-mark">M</div>
                 <div>
                     <p class="screen-title">{{ $heading }}</p>
@@ -66,18 +66,18 @@
 
                     <form method="post" action="{{ route('logout') }}">
                         @csrf
-                        <button class="button secondary" style="min-height:42px;padding:8px 10px;font-size:14px" type="submit">Salir</button>
+                        <button class="button secondary compact" type="submit">Salir</button>
                     </form>
                 </div>
             @endauth
         </header>
 
         @if (session('status'))
-            <div class="job-card" style="border-color:#0f8a5f">{{ session('status') }}</div>
+            <div class="flash-card success">{{ session('status') }}</div>
         @endif
 
         @if ($errors->any())
-            <div class="job-card urgent">
+            <div class="flash-card danger">
                 <strong>Revisa el formulario</strong>
                 <ul>
                     @foreach ($errors->all() as $error)
@@ -92,9 +92,9 @@
 
     @if ($nav)
         <nav class="bottom-nav" aria-label="Navegacion tecnico">
-            <a href="{{ route('technician.dashboard') }}">Hoy</a>
-            <a href="{{ route('technician.dashboard') }}#avisos">Avisos</a>
-            <a href="{{ route('technician.dashboard') }}#partes">Partes</a>
+            <a class="{{ request()->routeIs('technician.dashboard') ? 'active' : '' }}" href="{{ route('technician.dashboard') }}">Hoy</a>
+            <a class="{{ request()->routeIs('technician.notices.*') ? 'active' : '' }}" href="{{ route('technician.dashboard') }}#avisos">Avisos</a>
+            <a class="{{ request()->routeIs('technician.work-orders.*') ? 'active' : '' }}" href="{{ route('technician.dashboard') }}#partes">Partes</a>
         </nav>
     @endif
 </body>
