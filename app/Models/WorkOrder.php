@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class WorkOrder extends Model
 {
@@ -14,43 +14,14 @@ class WorkOrder extends Model
 
     protected static function booted(): void
     {
-        static::creating(function (WorkOrder $workOrder): void {
-            Log::info('MARPEL_WORK_ORDER_CREATING', [
-                'customer_id' => $workOrder->customer_id,
-                'installation_id' => $workOrder->installation_id,
-                'equipment_id' => $workOrder->equipment_id,
-                'notice_id' => $workOrder->notice_id,
-                'review_id' => $workOrder->review_id,
-                'quote_id' => $workOrder->quote_id,
-                'assigned_user_id' => $workOrder->assigned_user_id,
-                'status' => $workOrder->status,
-            ]);
-        });
-
         static::saving(function (WorkOrder $workOrder): void {
-            Log::info('MARPEL_WORK_ORDER_VALIDATING', [
-                'id' => $workOrder->id,
-                'customer_id' => $workOrder->customer_id,
-                'installation_id' => $workOrder->installation_id,
-                'equipment_id' => $workOrder->equipment_id,
-                'notice_id' => $workOrder->notice_id,
-                'review_id' => $workOrder->review_id,
-                'quote_id' => $workOrder->quote_id,
-            ]);
-
             app(\App\Services\OperationalContextValidator::class)->validate($workOrder);
 
-            Log::info('MARPEL_WORK_ORDER_VALIDATION_OK', [
-                'id' => $workOrder->id,
-            ]);
-        });
-
-        static::created(function (WorkOrder $workOrder): void {
-            Log::info('MARPEL_WORK_ORDER_CREATED', [
-                'id' => $workOrder->id,
-                'customer_id' => $workOrder->customer_id,
-                'installation_id' => $workOrder->installation_id,
-            ]);
+            if ($workOrder->isDirty('status') && $workOrder->status === 'closed' && ! $workOrder->customer_signature_path) {
+                throw ValidationException::withMessages([
+                    'customer_signature_path' => 'No se puede cerrar el parte sin firma del cliente.',
+                ]);
+            }
         });
     }
 

@@ -50,6 +50,108 @@ body {
     font-weight: 800;
 }
 
+.topbar-actions {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.notification-menu {
+    position: relative;
+}
+
+.notification-menu summary {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 42px;
+    min-height: 42px;
+    border-radius: 8px;
+    background: #e8eefb;
+    color: #173f8a;
+    font-weight: 900;
+    list-style: none;
+    cursor: pointer;
+}
+
+.notification-menu summary::-webkit-details-marker {
+    display: none;
+}
+
+.notification-icon {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.notification-count {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    display: grid;
+    place-items: center;
+    min-width: 21px;
+    height: 21px;
+    padding: 0 5px;
+    border: 2px solid white;
+    border-radius: 999px;
+    background: #e5484d;
+    color: white;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.notification-panel {
+    position: absolute;
+    top: 50px;
+    right: 0;
+    z-index: 50;
+    width: min(310px, calc(100vw - 28px));
+    overflow: hidden;
+    border: 1px solid var(--marpel-line);
+    border-radius: 8px;
+    background: white;
+    box-shadow: 0 16px 40px rgba(23, 32, 51, 0.22);
+}
+
+.notification-panel strong {
+    display: block;
+    padding: 13px 14px;
+    border-bottom: 1px solid var(--marpel-line);
+    font-size: 14px;
+}
+
+.notification-panel a {
+    display: block;
+    padding: 13px 14px;
+    border-bottom: 1px solid #eef1f6;
+    color: var(--marpel-ink);
+    text-decoration: none;
+}
+
+.notification-panel a:last-child {
+    border-bottom: 0;
+}
+
+.notification-panel span {
+    display: block;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.notification-panel small,
+.notification-panel p {
+    display: block;
+    margin: 4px 0 0;
+    color: var(--marpel-muted);
+    font-size: 13px;
+}
+
+.notification-panel p {
+    padding: 22px 14px;
+    text-align: center;
+}
+
 .screen-title {
     margin: 0;
     font-size: 21px;

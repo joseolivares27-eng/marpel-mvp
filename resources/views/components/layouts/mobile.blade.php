@@ -24,6 +24,12 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body>
+    @php
+        $marpelNotifications = auth()->check()
+            ? auth()->user()->unreadNotifications()->latest()->limit(5)->get()
+            : collect();
+    @endphp
+
     <main class="mobile-shell">
         <header class="topbar">
             <div style="display:flex;align-items:center;gap:10px">
@@ -34,10 +40,35 @@
                 </div>
             </div>
             @auth
-                <form method="post" action="{{ route('logout') }}">
-                    @csrf
-                    <button class="button secondary" style="min-height:42px;padding:8px 10px;font-size:14px" type="submit">Salir</button>
-                </form>
+                <div class="topbar-actions">
+                    <details class="notification-menu">
+                        <summary aria-label="Notificaciones">
+                            <span class="notification-icon">!</span>
+                            @if ($marpelNotifications->isNotEmpty())
+                                <span class="notification-count">{{ $marpelNotifications->count() }}</span>
+                            @endif
+                        </summary>
+                        <div class="notification-panel">
+                            <strong>Notificaciones</strong>
+                            @forelse ($marpelNotifications as $notification)
+                                @php($workOrderId = $notification->data['work_order_id'] ?? null)
+                                @if ($workOrderId)
+                                    <a href="{{ route('technician.work-orders.show', $workOrderId) }}">
+                                        <span>{{ $notification->data['title'] ?? 'Nuevo parte asignado' }}</span>
+                                        <small>{{ $notification->data['body'] ?? 'Toca para abrir el parte.' }}</small>
+                                    </a>
+                                @endif
+                            @empty
+                                <p>Sin notificaciones nuevas.</p>
+                            @endforelse
+                        </div>
+                    </details>
+
+                    <form method="post" action="{{ route('logout') }}">
+                        @csrf
+                        <button class="button secondary" style="min-height:42px;padding:8px 10px;font-size:14px" type="submit">Salir</button>
+                    </form>
+                </div>
             @endauth
         </header>
 

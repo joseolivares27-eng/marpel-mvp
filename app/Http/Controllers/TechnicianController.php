@@ -21,20 +21,20 @@ class TechnicianController extends Controller
 
         $notices = Notice::with(['customer', 'installation', 'equipment'])
             ->where('assigned_user_id', $user->id)
-            ->whereNotIn('status', ['closed', 'cancelled'])
+            ->whereNotIn('status', ['resolved', 'cancelled'])
             ->orderByRaw("case when priority = 'urgent' then 0 else 1 end")
             ->orderBy('scheduled_at')
             ->get();
 
         $reviews = Review::with(['customer', 'installation', 'equipment'])
             ->where('assigned_user_id', $user->id)
-            ->whereIn('status', ['scheduled', 'in_progress'])
+            ->whereIn('status', ['scheduled', 'assigned', 'in_progress'])
             ->orderBy('scheduled_at')
             ->get();
 
         $workOrders = WorkOrder::with(['installation', 'equipment', 'notice', 'review'])
             ->where('assigned_user_id', $user->id)
-            ->whereIn('status', ['open', 'in_progress'])
+            ->whereIn('status', ['new', 'in_progress'])
             ->latest('started_at')
             ->get();
 
@@ -73,9 +73,18 @@ class TechnicianController extends Controller
         return redirect()->route('technician.work-orders.show', $workOrder);
     }
 
-    public function showWorkOrder(Request $request, WorkOrder $workOrder): View
+    public function showWorkOrder(Request $request, WorkOrder $workOrder, WorkOrderService $service): View
     {
         $this->ensureTechnicianCanSee($request, $workOrder->assigned_user_id);
+
+        if ($workOrder->status === 'new') {
+            $workOrder = $service->open($workOrder, $request->user());
+        }
+
+        $request->user()
+            ->unreadNotifications
+            ->filter(fn ($notification): bool => (int) ($notification->data['work_order_id'] ?? 0) === (int) $workOrder->id)
+            ->each->markAsRead();
 
         $workOrder->load(['customer', 'installation', 'equipment', 'notice', 'review', 'materials.material', 'photos']);
         $materials = Material::where('is_active', true)->orderBy('name')->get();
@@ -107,18 +116,30 @@ class TechnicianController extends Controller
             ]);
         }
 
-        if ($request->input('action') === 'close') {
-            $service->close($workOrder, $validated, $validated['materials'] ?? []);
-
-            return redirect()->route('technician.dashboard')->with('status', 'Parte cerrado.');
-        }
-
         $workOrder->update([
-            'status' => 'in_progress',
+            'status' => $workOrder->status === 'closed' ? 'closed' : 'in_progress',
             'work_performed' => $validated['work_performed'] ?? null,
             'observations' => $validated['observations'] ?? null,
             'result' => $validated['result'] ?? null,
         ]);
+
+        $service->saveMaterials($workOrder, $validated['materials'] ?? []);
+
+        if ($request->input('action') === 'sign') {
+            return redirect()->route('technician.work-orders.signature', $workOrder);
+        }
+
+        if ($request->input('action') === 'close') {
+            if (! $workOrder->customer_signature_path) {
+                return redirect()
+                    ->route('technician.work-orders.signature', $workOrder)
+                    ->with('status', 'Falta la firma del cliente para cerrar el parte.');
+            }
+
+            $service->close($workOrder->refresh(), $validated);
+
+            return redirect()->route('technician.dashboard')->with('status', 'Parte cerrado.');
+        }
 
         return back()->with('status', 'Parte guardado.');
     }
@@ -132,7 +153,7 @@ class TechnicianController extends Controller
         return view('technician.signature', compact('workOrder'));
     }
 
-    public function storeSignature(Request $request, WorkOrder $workOrder): RedirectResponse
+    public function storeSignature(Request $request, WorkOrder $workOrder, WorkOrderService $service): RedirectResponse
     {
         $this->ensureTechnicianCanSee($request, $workOrder->assigned_user_id);
 
@@ -155,7 +176,15 @@ class TechnicianController extends Controller
             'signed_at' => now(),
         ]);
 
-        return redirect()->route('technician.work-orders.show', $workOrder)->with('status', 'Firma guardada.');
+        $workOrder->refresh();
+
+        $service->close($workOrder, [
+            'work_performed' => $workOrder->work_performed,
+            'observations' => $workOrder->observations,
+            'result' => $workOrder->result ?: ($workOrder->review_id ? 'ok' : 'solved'),
+        ]);
+
+        return redirect()->route('technician.dashboard')->with('status', 'Parte firmado y cerrado.');
     }
 
     private function ensureTechnicianCanSee(Request $request, ?int $assignedUserId): void

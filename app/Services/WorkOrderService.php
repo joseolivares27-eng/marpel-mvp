@@ -8,9 +8,10 @@ use App\Models\Quote;
 use App\Models\Review;
 use App\Models\User;
 use App\Models\WorkOrder;
+use App\Notifications\WorkOrderAssigned;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class WorkOrderService
 {
@@ -21,61 +22,127 @@ class WorkOrderService
     public function startFromNotice(Notice $notice, User $technician): WorkOrder
     {
         return DB::transaction(function () use ($notice, $technician): WorkOrder {
-            Log::info('MARPEL_WORK_ORDER_START_FROM_NOTICE', [
-                'notice_id' => $notice->id,
-                'customer_id' => $notice->customer_id,
-                'installation_id' => $notice->installation_id,
-                'equipment_id' => $notice->equipment_id,
-                'technician_id' => $technician->id,
-            ]);
+            $workOrder = $this->createFromNotice($notice, $technician, notifyTechnician: false);
 
             $notice->update([
                 'status' => 'in_progress',
-                'assigned_user_id' => $notice->assigned_user_id ?: $technician->id,
+                'assigned_user_id' => $technician->id,
                 'started_at' => now(),
             ]);
 
-            return WorkOrder::firstOrCreate(
-                ['notice_id' => $notice->id],
-                [
-                    'customer_id' => $notice->customer_id,
-                    'installation_id' => $notice->installation_id,
-                    'equipment_id' => $notice->equipment_id,
-                    'assigned_user_id' => $technician->id,
-                    'status' => 'open',
-                    'started_at' => now(),
-                ],
-            );
+            return $this->open($workOrder, $technician);
         });
     }
 
     public function startFromReview(Review $review, User $technician): WorkOrder
     {
         return DB::transaction(function () use ($review, $technician): WorkOrder {
-            Log::info('MARPEL_WORK_ORDER_START_FROM_REVIEW', [
-                'review_id' => $review->id,
-                'customer_id' => $review->customer_id,
-                'installation_id' => $review->installation_id,
-                'equipment_id' => $review->equipment_id,
-                'technician_id' => $technician->id,
-            ]);
+            $workOrder = $this->createFromReview($review, $technician, notifyTechnician: false);
 
             $review->update([
                 'status' => 'in_progress',
-                'assigned_user_id' => $review->assigned_user_id ?: $technician->id,
+                'assigned_user_id' => $technician->id,
             ]);
 
-            return WorkOrder::firstOrCreate(
+            return $this->open($workOrder, $technician);
+        });
+    }
+
+    public function createFromNotice(Notice $notice, User $technician, bool $notifyTechnician = true): WorkOrder
+    {
+        return DB::transaction(function () use ($notice, $technician, $notifyTechnician): WorkOrder {
+            $workOrder = WorkOrder::firstOrCreate(
+                ['notice_id' => $notice->id],
+                [
+                    'customer_id' => $notice->customer_id,
+                    'installation_id' => $notice->installation_id,
+                    'equipment_id' => $notice->equipment_id,
+                    'assigned_user_id' => $technician->id,
+                    'status' => 'new',
+                    'observations' => $notice->description,
+                ],
+            );
+
+            $workOrder->update([
+                'assigned_user_id' => $technician->id,
+                'status' => $workOrder->status === 'closed' ? 'closed' : 'new',
+            ]);
+
+            $notice->update([
+                'status' => $workOrder->status === 'closed' ? $notice->status : 'assigned',
+                'assigned_user_id' => $technician->id,
+            ]);
+
+            if ($notifyTechnician && $workOrder->status !== 'closed') {
+                $technician->notify(new WorkOrderAssigned($workOrder->refresh()));
+            }
+
+            return $workOrder->refresh();
+        });
+    }
+
+    public function createFromReview(Review $review, User $technician, bool $notifyTechnician = true): WorkOrder
+    {
+        return DB::transaction(function () use ($review, $technician, $notifyTechnician): WorkOrder {
+            $workOrder = WorkOrder::firstOrCreate(
                 ['review_id' => $review->id],
                 [
                     'customer_id' => $review->customer_id,
                     'installation_id' => $review->installation_id,
                     'equipment_id' => $review->equipment_id,
                     'assigned_user_id' => $technician->id,
-                    'status' => 'open',
-                    'started_at' => now(),
+                    'status' => 'new',
+                    'observations' => $review->notes ?: 'Revision programada',
                 ],
             );
+
+            $workOrder->update([
+                'assigned_user_id' => $technician->id,
+                'status' => $workOrder->status === 'closed' ? 'closed' : 'new',
+            ]);
+
+            $review->update([
+                'status' => $workOrder->status === 'closed' ? $review->status : 'assigned',
+                'assigned_user_id' => $technician->id,
+            ]);
+
+            if ($notifyTechnician && $workOrder->status !== 'closed') {
+                $technician->notify(new WorkOrderAssigned($workOrder->refresh()));
+            }
+
+            return $workOrder->refresh();
+        });
+    }
+
+    public function open(WorkOrder $workOrder, User $technician): WorkOrder
+    {
+        return DB::transaction(function () use ($workOrder, $technician): WorkOrder {
+            if ($workOrder->status === 'closed') {
+                return $workOrder->refresh();
+            }
+
+            $workOrder->update([
+                'assigned_user_id' => $workOrder->assigned_user_id ?: $technician->id,
+                'status' => 'in_progress',
+                'started_at' => $workOrder->started_at ?: now(),
+            ]);
+
+            if ($workOrder->notice) {
+                $workOrder->notice->update([
+                    'status' => 'in_progress',
+                    'assigned_user_id' => $workOrder->assigned_user_id,
+                    'started_at' => $workOrder->notice->started_at ?: now(),
+                ]);
+            }
+
+            if ($workOrder->review) {
+                $workOrder->review->update([
+                    'status' => 'in_progress',
+                    'assigned_user_id' => $workOrder->assigned_user_id,
+                ]);
+            }
+
+            return $workOrder->refresh();
         });
     }
 
@@ -85,7 +152,18 @@ class WorkOrderService
     public function close(WorkOrder $workOrder, array $data, array $materials = []): WorkOrder
     {
         return DB::transaction(function () use ($workOrder, $data, $materials): WorkOrder {
-            $result = $data['result'] ?? 'solved';
+            if (! $workOrder->customer_signature_path) {
+                throw ValidationException::withMessages([
+                    'customer_signature_path' => 'No se puede cerrar el parte sin firma del cliente.',
+                ]);
+            }
+
+            $wasClosed = $workOrder->status === 'closed';
+            $result = $this->normalizeResult($workOrder, $data['result'] ?? null);
+
+            if ($materials !== []) {
+                $this->saveMaterials($workOrder, $materials);
+            }
 
             $workOrder->update([
                 'status' => 'closed',
@@ -95,32 +173,13 @@ class WorkOrderService
                 'observations' => $data['observations'] ?? $workOrder->observations,
             ]);
 
-            foreach ($materials as $materialLine) {
-                $materialId = Arr::get($materialLine, 'material_id');
-                $material = $materialId ? Material::find($materialId) : null;
-                $quantity = (float) (Arr::get($materialLine, 'quantity') ?: 1);
-                $description = Arr::get($materialLine, 'description') ?: $material?->name;
-
-                if (! $description) {
-                    continue;
-                }
-
-                $workOrder->materials()->create([
-                    'material_id' => $material?->id,
-                    'description' => $description,
-                    'quantity' => $quantity,
-                    'unit_cost' => $material?->cost_price ?? 0,
-                    'unit_price' => $material?->sale_price ?? 0,
-                ]);
-
-                if ($material) {
-                    $material->decrement('stock_quantity', $quantity);
-                }
+            if (! $wasClosed) {
+                $this->decrementMaterialsStock($workOrder->refresh());
             }
 
             if ($workOrder->notice) {
                 $workOrder->notice->update([
-                    'status' => $result === 'requires_quote' ? 'pending_quote' : 'closed',
+                    'status' => $result === 'requires_quote' ? 'pending_quote' : 'resolved',
                     'closed_at' => now(),
                     'requires_quote' => $result === 'requires_quote',
                 ]);
@@ -169,6 +228,65 @@ class WorkOrderService
 
             return $workOrder->refresh();
         });
+    }
+
+    /**
+     * @param array<int, array{material_id?: int|null, description?: string|null, quantity?: numeric-string|float|int|null}> $materials
+     */
+    public function saveMaterials(WorkOrder $workOrder, array $materials): void
+    {
+        $lines = collect($materials)
+            ->map(fn (array $materialLine): ?array => $this->materialLineData($materialLine))
+            ->filter()
+            ->values();
+
+        $workOrder->materials()->delete();
+
+        $lines->each(fn (array $line) => $workOrder->materials()->create($line));
+    }
+
+    /**
+     * @param array{material_id?: int|null, description?: string|null, quantity?: numeric-string|float|int|null} $materialLine
+     * @return array<string, mixed>|null
+     */
+    private function materialLineData(array $materialLine): ?array
+    {
+        $materialId = Arr::get($materialLine, 'material_id');
+        $material = $materialId ? Material::find($materialId) : null;
+        $quantity = (float) (Arr::get($materialLine, 'quantity') ?: 1);
+        $description = trim((string) (Arr::get($materialLine, 'description') ?: $material?->name));
+
+        if (! $material && $description === '') {
+            return null;
+        }
+
+        return [
+            'material_id' => $material?->id,
+            'description' => $description !== '' ? $description : null,
+            'quantity' => $quantity > 0 ? $quantity : 1,
+            'unit_cost' => $material?->cost_price ?? 0,
+            'unit_price' => $material?->sale_price ?? 0,
+        ];
+    }
+
+    private function decrementMaterialsStock(WorkOrder $workOrder): void
+    {
+        $workOrder->loadMissing('materials.material');
+
+        foreach ($workOrder->materials as $line) {
+            if ($line->material) {
+                $line->material->decrement('stock_quantity', (float) $line->quantity);
+            }
+        }
+    }
+
+    private function normalizeResult(WorkOrder $workOrder, ?string $result): string
+    {
+        if ($workOrder->review_id && (! $result || $result === 'solved')) {
+            return 'ok';
+        }
+
+        return $result ?: 'solved';
     }
 
     private function nextQuoteNumber(): string

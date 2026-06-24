@@ -56,4 +56,9 @@ class User extends Authenticatable implements FilamentUser
     {
         return $this->hasMany(WorkOrder::class, 'assigned_user_id');
     }
+
+    public function assignedWorkOrders(): HasMany
+    {
+        return $this->workOrders();
+    }
 }

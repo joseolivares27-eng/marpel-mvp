@@ -5,8 +5,8 @@
     use App\Models\User;
 
     $pendingNotices = Notice::whereIn('status', ['pending', 'assigned', 'in_progress', 'pending_quote'])->count();
-    $upcomingReviews = Review::whereIn('status', ['scheduled', 'in_progress'])->where('scheduled_at', '<=', now()->addDays(14))->count();
-    $openWorkOrders = WorkOrder::whereIn('status', ['open', 'in_progress'])->count();
+    $upcomingReviews = Review::whereIn('status', ['scheduled', 'assigned', 'in_progress'])->where('scheduled_at', '<=', now()->addDays(14))->count();
+    $openWorkOrders = WorkOrder::whereIn('status', ['new', 'in_progress'])->count();
     $toInvoice = WorkOrder::where('status', 'closed')->whereDoesntHave('invoiceLines')->count();
     $urgentNotices = Notice::with(['customer', 'installation', 'equipment', 'technician'])
         ->whereIn('status', ['pending', 'assigned', 'in_progress'])

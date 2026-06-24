@@ -4,9 +4,13 @@ namespace App\Filament\Resources\Notices;
 
 use App\Filament\Resources\Notices\Pages\ManageNotices;
 use App\Models\Notice;
+use App\Models\User;
+use App\Services\WorkOrderService;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Notifications\Notification as FilamentNotification;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -57,7 +61,7 @@ class NoticeResource extends Resource
                 'assigned' => 'Asignado',
                 'in_progress' => 'En curso',
                 'pending_quote' => 'Pendiente presupuesto',
-                'closed' => 'Cerrado',
+                'resolved' => 'Resuelto',
                 'cancelled' => 'Cancelado',
             ])->default('pending')->required(),
             Select::make('assigned_user_id')->label('Tecnico')->relationship('technician', 'name')->searchable()->preload(),
@@ -77,9 +81,37 @@ class NoticeResource extends Resource
                 TextColumn::make('installation.name')->label('Instalacion')->searchable(),
                 TextColumn::make('equipment.name')->label('Equipo')->searchable(),
                 TextColumn::make('technician.name')->label('Tecnico')->searchable(),
+                TextColumn::make('workOrder.id')->label('Parte')->sortable(),
                 TextColumn::make('scheduled_at')->label('Fecha')->dateTime('d/m/Y H:i')->sortable(),
             ])
             ->recordActions([
+                Action::make('create_work_order')
+                    ->label('Crear parte')
+                    ->icon('heroicon-o-clipboard-document-check')
+                    ->form([
+                        Select::make('technician_id')
+                            ->label('Tecnico')
+                            ->options(fn (): array => User::query()
+                                ->where('role', 'technician')
+                                ->where('is_active', true)
+                                ->orderBy('name')
+                                ->pluck('name', 'id')
+                                ->all())
+                            ->searchable()
+                            ->required(),
+                    ])
+                    ->action(function (Notice $record, array $data): void {
+                        $technician = User::query()->findOrFail($data['technician_id']);
+
+                        app(WorkOrderService::class)->createFromNotice($record, $technician);
+
+                        FilamentNotification::make()
+                            ->success()
+                            ->title('Parte creado y notificado')
+                            ->body('El tecnico ya tiene el parte en su PWA.')
+                            ->send();
+                    })
+                    ->hidden(fn (Notice $record): bool => $record->workOrder()->exists() || in_array($record->status, ['resolved', 'cancelled'], true)),
                 EditAction::make(),
             ])
             ->toolbarActions([

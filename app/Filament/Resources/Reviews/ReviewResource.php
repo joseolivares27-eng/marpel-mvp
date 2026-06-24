@@ -4,9 +4,13 @@ namespace App\Filament\Resources\Reviews;
 
 use App\Filament\Resources\Reviews\Pages\ManageReviews;
 use App\Models\Review;
+use App\Models\User;
+use App\Services\WorkOrderService;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Notifications\Notification as FilamentNotification;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
@@ -42,6 +46,7 @@ class ReviewResource extends Resource
             Select::make('type')->label('Tipo')->options(['preventive' => 'Preventiva', 'corrective' => 'Correctiva'])->default('preventive')->required(),
             Select::make('status')->label('Estado')->options([
                 'scheduled' => 'Programada',
+                'assigned' => 'Asignada',
                 'in_progress' => 'En curso',
                 'closed' => 'Cerrada',
                 'cancelled' => 'Cancelada',
@@ -66,9 +71,37 @@ class ReviewResource extends Resource
                 TextColumn::make('installation.name')->label('Instalacion')->searchable(),
                 TextColumn::make('equipment.name')->label('Equipo')->searchable(),
                 TextColumn::make('technician.name')->label('Tecnico')->searchable(),
+                TextColumn::make('workOrder.id')->label('Parte')->sortable(),
                 TextColumn::make('next_review_at')->label('Proxima')->date()->sortable(),
             ])
             ->recordActions([
+                Action::make('create_work_order')
+                    ->label('Crear parte')
+                    ->icon('heroicon-o-clipboard-document-check')
+                    ->form([
+                        Select::make('technician_id')
+                            ->label('Tecnico')
+                            ->options(fn (): array => User::query()
+                                ->where('role', 'technician')
+                                ->where('is_active', true)
+                                ->orderBy('name')
+                                ->pluck('name', 'id')
+                                ->all())
+                            ->searchable()
+                            ->required(),
+                    ])
+                    ->action(function (Review $record, array $data): void {
+                        $technician = User::query()->findOrFail($data['technician_id']);
+
+                        app(WorkOrderService::class)->createFromReview($record, $technician);
+
+                        FilamentNotification::make()
+                            ->success()
+                            ->title('Parte creado y notificado')
+                            ->body('El tecnico ya tiene la revision en su PWA.')
+                            ->send();
+                    })
+                    ->hidden(fn (Review $record): bool => $record->workOrder()->exists() || in_array($record->status, ['closed', 'cancelled'], true)),
                 EditAction::make(),
             ])
             ->toolbarActions([

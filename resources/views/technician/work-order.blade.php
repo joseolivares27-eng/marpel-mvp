@@ -10,8 +10,26 @@
         <p class="job-meta">{{ $workOrder->customer->legal_name }} · {{ $workOrder->equipment?->code }} {{ $workOrder->equipment?->name ?? 'Sin equipo concreto' }}</p>
         @if ($workOrder->notice)
             <p>{{ $workOrder->notice->description }}</p>
+        @elseif ($workOrder->review)
+            <p>{{ $workOrder->review->notes ?: 'Revision programada' }}</p>
         @endif
     </section>
+
+    @php
+        $defaultResult = old('result', $workOrder->result ?: ($workOrder->review ? 'ok' : 'solved'));
+        $oldMaterials = old('materials');
+        $materialRows = $oldMaterials !== null
+            ? collect($oldMaterials)
+            : $workOrder->materials->map(fn ($line) => [
+                'material_id' => $line->material_id,
+                'description' => $line->description,
+                'quantity' => $line->quantity,
+            ]);
+
+        while ($materialRows->count() < 3) {
+            $materialRows->push(['material_id' => null, 'description' => '', 'quantity' => '']);
+        }
+    @endphp
 
     <form method="post" action="{{ route('technician.work-orders.update', $workOrder) }}" enctype="multipart/form-data">
         @csrf
@@ -37,33 +55,33 @@
                     'ok' => 'Revision correcta',
                     'incident' => 'Incidencia revision',
                 ] as $value => $label)
-                    <option value="{{ $value }}" @selected(old('result', $workOrder->result ?: 'solved') === $value)>{{ $label }}</option>
+                    <option value="{{ $value }}" @selected($defaultResult === $value)>{{ $label }}</option>
                 @endforeach
             </select>
         </div>
 
         <h2 class="section-title">Materiales</h2>
-        @for ($i = 0; $i < 3; $i++)
+        @foreach ($materialRows as $i => $materialRow)
             <section class="job-card">
                 <div class="field">
                     <label for="material_{{ $i }}">Material catalogo</label>
                     <select id="material_{{ $i }}" name="materials[{{ $i }}][material_id]" class="select">
                         <option value="">Sin catalogo</option>
                         @foreach ($materials as $material)
-                            <option value="{{ $material->id }}">{{ $material->name }} · stock {{ $material->stock_quantity }}</option>
+                            <option value="{{ $material->id }}" @selected((string) ($materialRow['material_id'] ?? '') === (string) $material->id)>{{ $material->name }} · stock {{ $material->stock_quantity }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div class="field">
                     <label>Descripcion manual</label>
-                    <input class="input" name="materials[{{ $i }}][description]" placeholder="Ej. Fotocelula">
+                    <input class="input" name="materials[{{ $i }}][description]" value="{{ $materialRow['description'] ?? '' }}" placeholder="Ej. Fotocelula">
                 </div>
                 <div class="field">
                     <label>Cantidad</label>
-                    <input class="input" name="materials[{{ $i }}][quantity]" type="number" min="0" step="0.01" value="{{ $i === 0 ? '1' : '' }}">
+                    <input class="input" name="materials[{{ $i }}][quantity]" type="number" min="0" step="0.01" value="{{ $materialRow['quantity'] ?? ($i === 0 ? '1' : '') }}">
                 </div>
             </section>
-        @endfor
+        @endforeach
 
         <div class="field">
             <label for="photos">Fotografias</label>
@@ -80,9 +98,12 @@
         @endif
 
         <div class="action-grid">
-            <a class="button secondary" href="{{ route('technician.work-orders.signature', $workOrder) }}">Firma</a>
-            <button class="button secondary" name="action" value="save" type="submit">Guardar</button>
+            <button class="button secondary" name="action" value="save" type="submit">Guardar cambios</button>
         </div>
-        <button class="button success full" style="margin-top:10px" name="action" value="close" type="submit">Cerrar parte</button>
+        @if ($workOrder->customer_signature_path && $workOrder->status !== 'closed')
+            <button class="button success full" style="margin-top:10px" name="action" value="close" type="submit">Cerrar parte</button>
+        @else
+            <button class="button success full" style="margin-top:10px" name="action" value="sign" type="submit">Firmar y cerrar parte</button>
+        @endif
     </form>
 </x-layouts.mobile>

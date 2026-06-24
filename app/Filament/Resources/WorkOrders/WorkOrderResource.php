@@ -84,11 +84,11 @@ class WorkOrderResource extends Resource
                 ->columnSpanFull(),
             Select::make('quote_id')->label('Presupuesto')->relationship('quote', 'number')->searchable()->preload(),
             Select::make('status')->label('Estado')->options([
-                'open' => 'Abierto',
+                'new' => 'Nuevo',
                 'in_progress' => 'En curso',
                 'closed' => 'Cerrado',
                 'cancelled' => 'Cancelado',
-            ])->default('open')->required(),
+            ])->default('new')->required(),
             DateTimePicker::make('started_at')->label('Fecha inicio'),
             DateTimePicker::make('finished_at')->label('Fecha fin'),
             Select::make('result')->label('Resultado')->options([
@@ -96,6 +96,8 @@ class WorkOrderResource extends Resource
                 'pending_material' => 'Pendiente material',
                 'requires_quote' => 'Requiere presupuesto',
                 'not_located' => 'No localizado',
+                'ok' => 'Revision correcta',
+                'incident' => 'Incidencia revision',
             ]),
             Textarea::make('work_performed')->label('Trabajo realizado')->columnSpanFull(),
             Repeater::make('materials')->label('Materiales')->relationship()->schema([
@@ -179,7 +181,7 @@ class WorkOrderResource extends Resource
         $set('equipment_id', $notice->equipment_id);
         $set('assigned_user_id', $notice->assigned_user_id);
         $set('observations', $notice->description);
-        $set('status', 'open');
+        $set('status', 'new');
     }
 
     private static function fillFromReview(?int $reviewId, Set $set): void
@@ -200,7 +202,7 @@ class WorkOrderResource extends Resource
         $set('equipment_id', $review->equipment_id);
         $set('assigned_user_id', $review->assigned_user_id);
         $set('observations', $review->notes ?: 'Revision programada');
-        $set('status', 'open');
+        $set('status', 'new');
     }
 
     private static function noticeLabel(Notice $notice): string

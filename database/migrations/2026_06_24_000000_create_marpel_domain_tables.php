@@ -193,7 +193,7 @@ return new class extends Migration
             $table->foreignId('review_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('quote_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('assigned_user_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->string('status')->default('open')->index();
+            $table->string('status')->default('new')->index();
             $table->dateTime('started_at')->nullable();
             $table->dateTime('finished_at')->nullable();
             $table->string('result')->nullable();

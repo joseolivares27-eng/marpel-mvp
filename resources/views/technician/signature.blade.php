@@ -20,7 +20,7 @@
 
         <div class="action-grid">
             <button id="clear-signature" class="button secondary" type="button">Limpiar</button>
-            <button class="button success" type="submit">Guardar firma</button>
+            <button class="button success" type="submit">Guardar firma y cerrar</button>
         </div>
     </form>
 

@@ -77,10 +77,10 @@
     <h2 id="partes" class="section-title">Partes abiertos</h2>
     @forelse ($workOrders as $workOrder)
         <article class="job-card">
-            <span class="badge">{{ $workOrder->status }}</span>
+            <span class="badge">{{ $workOrder->status === 'new' ? 'Nuevo' : $workOrder->status }}</span>
             <h3>{{ $workOrder->installation->name }}</h3>
             <p class="job-meta">{{ $workOrder->equipment?->code }} {{ $workOrder->equipment?->name ?? 'Sin equipo concreto' }}</p>
-            <a class="button full" href="{{ route('technician.work-orders.show', $workOrder) }}">Continuar parte</a>
+            <a class="button full" href="{{ route('technician.work-orders.show', $workOrder) }}">{{ $workOrder->status === 'new' ? 'Abrir parte' : 'Continuar parte' }}</a>
         </article>
     @empty
         <p class="job-meta">No hay partes abiertos.</p>

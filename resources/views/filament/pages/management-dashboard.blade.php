@@ -7,8 +7,8 @@
     use App\Models\WorkOrder;
 
     $monthlyRevenue = Invoice::where('status', 'paid')->whereMonth('paid_at', now()->month)->sum('total');
-    $openNotices = Notice::whereNotIn('status', ['closed', 'cancelled'])->count();
-    $pendingReviews = Review::whereIn('status', ['scheduled', 'in_progress'])->count();
+    $openNotices = Notice::whereNotIn('status', ['resolved', 'cancelled'])->count();
+    $pendingReviews = Review::whereIn('status', ['scheduled', 'assigned', 'in_progress'])->count();
     $activeCustomers = Customer::where('status', 'active')->count();
     $pendingQuotes = Quote::whereIn('status', ['sent', 'draft'])->count();
     $closedNotInvoiced = WorkOrder::where('status', 'closed')->whereDoesntHave('invoiceLines')->count();
