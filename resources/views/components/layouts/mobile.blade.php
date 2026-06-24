@@ -93,7 +93,7 @@
     @if ($nav)
         <nav class="bottom-nav" aria-label="Navegacion tecnico">
             <a class="{{ request()->routeIs('technician.dashboard') ? 'active' : '' }}" href="{{ route('technician.dashboard') }}">Hoy</a>
-            <a class="{{ request()->routeIs('technician.notices.*') ? 'active' : '' }}" href="{{ route('technician.dashboard') }}#avisos">Avisos</a>
+            <a class="{{ request()->routeIs('technician.notices.*') ? 'active' : '' }}" href="{{ route('technician.notices.index') }}">Avisos</a>
             <a class="{{ request()->routeIs('technician.work-orders.*') ? 'active' : '' }}" href="{{ route('technician.dashboard') }}#partes">Partes</a>
         </nav>
     @endif

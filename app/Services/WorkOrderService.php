@@ -58,16 +58,16 @@ class WorkOrderService
                     'installation_id' => $notice->installation_id,
                     'equipment_id' => $notice->equipment_id,
                     'assigned_user_id' => $technician->id,
-                    'status' => 'new',
-                    'result' => 'pendiente',
+                    'status' => 'open',
+                    'result' => 'pending',
                     'observations' => $notice->description,
                 ],
             );
 
             $workOrder->update([
                 'assigned_user_id' => $technician->id,
-                'status' => $workOrder->status === 'closed' ? 'closed' : 'new',
-                'result' => $workOrder->result ?: 'pendiente',
+                'status' => $workOrder->status === 'closed' ? 'closed' : 'open',
+                'result' => $this->normalizeResult($workOrder->result),
             ]);
 
             $notice->update([
@@ -93,16 +93,16 @@ class WorkOrderService
                     'installation_id' => $review->installation_id,
                     'equipment_id' => $review->equipment_id,
                     'assigned_user_id' => $technician->id,
-                    'status' => 'new',
-                    'result' => 'pendiente',
+                    'status' => 'open',
+                    'result' => 'pending',
                     'observations' => $review->notes ?: 'Revision programada',
                 ],
             );
 
             $workOrder->update([
                 'assigned_user_id' => $technician->id,
-                'status' => $workOrder->status === 'closed' ? 'closed' : 'new',
-                'result' => $workOrder->result ?: 'pendiente',
+                'status' => $workOrder->status === 'closed' ? 'closed' : 'open',
+                'result' => $this->normalizeResult($workOrder->result),
             ]);
 
             $review->update([
@@ -288,9 +288,9 @@ class WorkOrderService
     private function normalizeResult(?string $result): string
     {
         return match ($result) {
-            'solucionado', 'solved', 'ok' => 'solucionado',
-            'no_solucionado', 'not_located', 'incident' => 'no_solucionado',
-            default => 'pendiente',
+            'solved', 'solucionado', 'ok' => 'solved',
+            'not_solved', 'no_solucionado', 'not_located', 'incident' => 'not_solved',
+            default => 'pending',
         };
     }
 

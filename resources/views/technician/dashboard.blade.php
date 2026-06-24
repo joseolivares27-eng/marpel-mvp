@@ -113,10 +113,14 @@
                 @endif
             </div>
             <div class="primary-action-grid">
-                <form method="post" action="{{ route('technician.notices.start', $nextNotice) }}">
-                    @csrf
-                    <button class="button success full" type="submit">Iniciar parte</button>
-                </form>
+                @if ($nextNotice->workOrder)
+                    <a class="button success full" href="{{ route('technician.work-orders.show', $nextNotice->workOrder) }}">Abrir parte</a>
+                @else
+                    <form method="post" action="{{ route('technician.notices.start', $nextNotice) }}">
+                        @csrf
+                        <button class="button success full" type="submit">Iniciar parte</button>
+                    </form>
+                @endif
             </div>
         </section>
     @elseif ($nextReview)
@@ -139,10 +143,14 @@
                 @endif
             </div>
             <div class="primary-action-grid">
-                <form method="post" action="{{ route('technician.reviews.start', $nextReview) }}">
-                    @csrf
-                    <button class="button success full" type="submit">Iniciar revision</button>
-                </form>
+                @if ($nextReview->workOrder)
+                    <a class="button success full" href="{{ route('technician.work-orders.show', $nextReview->workOrder) }}">Abrir parte</a>
+                @else
+                    <form method="post" action="{{ route('technician.reviews.start', $nextReview) }}">
+                        @csrf
+                        <button class="button success full" type="submit">Iniciar revision</button>
+                    </form>
+                @endif
             </div>
         </section>
     @else
@@ -169,6 +177,16 @@
                     <a class="button secondary full" href="tel:{{ $noticePhone }}">Llamar {{ $noticePhone }}</a>
                 </div>
             @endif
+            <div class="primary-action-grid">
+                @if ($notice->workOrder)
+                    <a class="button success full" href="{{ route('technician.work-orders.show', $notice->workOrder) }}">Abrir parte</a>
+                @else
+                    <form method="post" action="{{ route('technician.notices.start', $notice) }}">
+                        @csrf
+                        <button class="button success full" type="submit">Iniciar parte</button>
+                    </form>
+                @endif
+            </div>
         </article>
     @empty
         <p class="empty-state">No tienes avisos pendientes.</p>
@@ -185,10 +203,14 @@
             <p class="job-meta">{{ $review->equipment->code }} {{ $review->equipment->name }}</p>
             <div class="action-grid">
                 <a class="button secondary" href="{{ $review->installation->mapsUrl() }}" target="_blank" rel="noreferrer">Maps</a>
-                <form method="post" action="{{ route('technician.reviews.start', $review) }}">
-                    @csrf
-                    <button class="button success full" type="submit">Iniciar</button>
-                </form>
+                @if ($review->workOrder)
+                    <a class="button success full" href="{{ route('technician.work-orders.show', $review->workOrder) }}">Abrir parte</a>
+                @else
+                    <form method="post" action="{{ route('technician.reviews.start', $review) }}">
+                        @csrf
+                        <button class="button success full" type="submit">Iniciar</button>
+                    </form>
+                @endif
             </div>
         </article>
     @empty

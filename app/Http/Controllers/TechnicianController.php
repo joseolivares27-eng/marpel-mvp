@@ -19,14 +19,14 @@ class TechnicianController extends Controller
     {
         $user = $request->user();
 
-        $notices = Notice::with(['customer', 'installation', 'equipment'])
+        $notices = Notice::with(['customer', 'installation', 'equipment', 'workOrder'])
             ->where('assigned_user_id', $user->id)
             ->whereNotIn('status', ['completed', 'resolved', 'cancelled'])
             ->orderByRaw("case when priority = 'urgent' then 0 else 1 end")
             ->orderBy('scheduled_at')
             ->get();
 
-        $reviews = Review::with(['customer', 'installation', 'equipment'])
+        $reviews = Review::with(['customer', 'installation', 'equipment', 'workOrder'])
             ->where('assigned_user_id', $user->id)
             ->whereIn('status', ['scheduled', 'assigned', 'in_progress'])
             ->orderBy('scheduled_at')
@@ -41,6 +41,20 @@ class TechnicianController extends Controller
         return view('technician.dashboard', compact('notices', 'reviews', 'workOrders'));
     }
 
+    public function notices(Request $request): View
+    {
+        $user = $request->user();
+
+        $notices = Notice::with(['customer', 'installation', 'equipment', 'workOrder'])
+            ->where('assigned_user_id', $user->id)
+            ->whereNotIn('status', ['completed', 'resolved', 'cancelled'])
+            ->orderByRaw("case when priority = 'urgent' then 0 else 1 end")
+            ->orderBy('scheduled_at')
+            ->get();
+
+        return view('technician.notices', compact('notices'));
+    }
+
     public function showNotice(Request $request, Notice $notice): View
     {
         $this->ensureTechnicianCanSee($request, $notice->assigned_user_id);
@@ -48,6 +62,7 @@ class TechnicianController extends Controller
         $notice->load([
             'customer',
             'installation',
+            'workOrder',
             'equipment.reviews' => fn ($query) => $query->latest('performed_at')->limit(5),
             'equipment.workOrders' => fn ($query) => $query->latest('finished_at')->limit(5),
         ]);
@@ -99,7 +114,9 @@ class TechnicianController extends Controller
         $validated = $request->validate([
             'work_performed' => ['nullable', 'string'],
             'observations' => ['nullable', 'string'],
-            'result' => ['nullable', 'string', 'in:solucionado,pendiente,no_solucionado'],
+            'result' => ['nullable', 'string', 'in:pending,solved,not_solved'],
+            'customer_name' => ['nullable', 'string', 'max:255'],
+            'signature_data' => ['nullable', 'string'],
             'materials' => ['array'],
             'materials.*.material_id' => ['nullable', 'integer', 'exists:materials,id'],
             'materials.*.description' => ['nullable', 'string', 'max:255'],
@@ -120,20 +137,44 @@ class TechnicianController extends Controller
             'status' => $workOrder->status === 'closed' ? 'closed' : 'in_progress',
             'work_performed' => $validated['work_performed'] ?? null,
             'observations' => $validated['observations'] ?? null,
-            'result' => $validated['result'] ?? 'pendiente',
+            'result' => $validated['result'] ?? 'pending',
         ]);
 
         $service->saveMaterials($workOrder, $validated['materials'] ?? []);
 
-        if ($request->input('action') === 'sign') {
-            return redirect()->route('technician.work-orders.signature', $workOrder);
+        if (! empty($validated['signature_data'])) {
+            if (empty($validated['customer_name'])) {
+                return back()
+                    ->withErrors(['customer_name' => 'Indica el nombre del firmante.'])
+                    ->withInput();
+            }
+
+            if (! $this->storeSignatureImage($workOrder, $validated['signature_data'], $validated['customer_name'])) {
+                return back()
+                    ->withErrors(['signature_data' => 'La firma no es valida. Limpia la firma y vuelve a firmar.'])
+                    ->withInput();
+            }
+        } elseif (! empty($validated['customer_name']) && $workOrder->customer_signature_path) {
+            $workOrder->update(['customer_name' => $validated['customer_name']]);
         }
+
+        $workOrder->refresh();
 
         if ($request->input('action') === 'close') {
             if (! $workOrder->customer_signature_path) {
-                return redirect()
-                    ->route('technician.work-orders.signature', $workOrder)
-                    ->with('status', 'Falta la firma del cliente para cerrar el parte.');
+                if (empty($validated['customer_name']) || empty($validated['signature_data'])) {
+                    return back()
+                        ->withErrors(['signature_data' => 'Falta el nombre y la firma del cliente para cerrar el parte.'])
+                        ->withInput();
+                }
+
+                $signatureStored = $this->storeSignatureImage($workOrder, $validated['signature_data'], $validated['customer_name']);
+
+                if (! $signatureStored) {
+                    return back()
+                        ->withErrors(['signature_data' => 'La firma no es valida. Limpia la firma y vuelve a firmar.'])
+                        ->withInput();
+                }
             }
 
             $service->close($workOrder->refresh(), $validated);
@@ -162,26 +203,14 @@ class TechnicianController extends Controller
             'signature_data' => ['required', 'string'],
         ]);
 
-        $signature = preg_replace('#^data:image/\w+;base64,#i', '', $validated['signature_data']);
-        $binary = base64_decode($signature, true);
-
-        abort_if($binary === false, 422, 'Firma no valida.');
-
-        $path = 'signatures/'.Str::uuid().'.png';
-        Storage::disk('public')->put($path, $binary);
-
-        $workOrder->update([
-            'customer_name' => $validated['customer_name'],
-            'customer_signature_path' => $path,
-            'signed_at' => now(),
-        ]);
+        abort_if(! $this->storeSignatureImage($workOrder, $validated['signature_data'], $validated['customer_name']), 422, 'Firma no valida.');
 
         $workOrder->refresh();
 
         $service->close($workOrder, [
             'work_performed' => $workOrder->work_performed,
             'observations' => $workOrder->observations,
-            'result' => $workOrder->result ?: 'pendiente',
+            'result' => $workOrder->result ?: 'pending',
         ]);
 
         return redirect()->route('technician.dashboard')->with('status', 'Parte firmado y cerrado.');
@@ -196,5 +225,31 @@ class TechnicianController extends Controller
         }
 
         abort_if($assignedUserId !== $user->id, 403);
+    }
+
+    private function storeSignatureImage(WorkOrder $workOrder, string $signatureData, string $customerName): bool
+    {
+        $signature = preg_replace('#^data:image/\w+;base64,#i', '', $signatureData);
+        $binary = base64_decode($signature, true);
+
+        if ($binary === false) {
+            return false;
+        }
+
+        $oldPath = $workOrder->customer_signature_path;
+        $path = 'signatures/'.Str::uuid().'.png';
+        Storage::disk('public')->put($path, $binary);
+
+        $workOrder->update([
+            'customer_name' => $customerName,
+            'customer_signature_path' => $path,
+            'signed_at' => now(),
+        ]);
+
+        if ($oldPath) {
+            Storage::disk('public')->delete($oldPath);
+        }
+
+        return true;
     }
 }

@@ -102,4 +102,17 @@ class WorkOrder extends Model
     {
         return $this->hasMany(InvoiceLine::class);
     }
+
+    public function getOriginLabelAttribute(): string
+    {
+        if ($this->notice_id) {
+            return 'Aviso';
+        }
+
+        if ($this->review_id) {
+            return 'Revision';
+        }
+
+        return 'Manual';
+    }
 }

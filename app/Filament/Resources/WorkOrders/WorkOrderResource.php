@@ -11,7 +11,6 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DateTimePicker;
-use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -84,26 +83,26 @@ class WorkOrderResource extends Resource
                 ->columnSpanFull(),
             Select::make('quote_id')->label('Presupuesto')->relationship('quote', 'number')->searchable()->preload(),
             Select::make('status')->label('Estado')->options([
-                'new' => 'Abierto',
+                'open' => 'Abierto',
                 'in_progress' => 'En curso',
                 'closed' => 'Cerrado',
                 'cancelled' => 'Cancelado',
             ])
-                ->default('new')
+                ->default('open')
                 ->afterStateHydrated(function (Select $component, ?string $state): void {
-                    if ($state === 'open') {
-                        $component->state('new');
+                    if ($state === 'new') {
+                        $component->state('open');
                     }
                 })
                 ->required(),
             DateTimePicker::make('started_at')->label('Fecha inicio'),
             DateTimePicker::make('finished_at')->label('Fecha fin'),
             Select::make('result')->label('Resultado')->options([
-                'solucionado' => 'Solucionado',
-                'pendiente' => 'Pendiente',
-                'no_solucionado' => 'No solucionado',
+                'pending' => 'Pendiente',
+                'solved' => 'Solucionado',
+                'not_solved' => 'No solucionado',
             ])
-                ->default('pendiente')
+                ->default('pending')
                 ->afterStateHydrated(function (Select $component, ?string $state): void {
                     $component->state(self::normalizeResultState($state));
                 })
@@ -144,9 +143,8 @@ class WorkOrderResource extends Resource
                 ->mutateRelationshipDataBeforeSaveUsing(fn (array $data): ?array => self::normalizeMaterialLine($data))
                 ->columns(2)
                 ->columnSpanFull(),
-            FileUpload::make('customer_signature_path')->label('Firma cliente')->disk('public')->directory('signatures'),
-            TextInput::make('customer_name')->label('Firma nombre'),
-            DateTimePicker::make('signed_at')->label('Firmado'),
+            TextInput::make('customer_name')->label('Nombre firmante'),
+            DateTimePicker::make('signed_at')->label('Firmado')->disabled()->dehydrated(false),
         ])->columns(2);
     }
 
@@ -155,6 +153,7 @@ class WorkOrderResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('id')->label('Parte')->sortable(),
+                TextColumn::make('origin_label')->label('Origen')->badge(),
                 TextColumn::make('status')->label('Estado')->badge()->formatStateUsing(fn (?string $state): string => self::statusLabel($state))->sortable(),
                 TextColumn::make('result')->label('Resultado')->badge()->formatStateUsing(fn (?string $state): string => self::resultLabel($state))->sortable(),
                 TextColumn::make('customer.legal_name')->label('Cliente')->searchable(),
@@ -191,8 +190,8 @@ class WorkOrderResource extends Resource
         $set('equipment_id', $notice->equipment_id);
         $set('assigned_user_id', $notice->assigned_user_id);
         $set('observations', $notice->description);
-        $set('status', 'new');
-        $set('result', 'pendiente');
+        $set('status', 'open');
+        $set('result', 'pending');
     }
 
     private static function fillFromReview(?int $reviewId, Set $set): void
@@ -213,15 +212,15 @@ class WorkOrderResource extends Resource
         $set('equipment_id', $review->equipment_id);
         $set('assigned_user_id', $review->assigned_user_id);
         $set('observations', $review->notes ?: 'Revision programada');
-        $set('status', 'new');
-        $set('result', 'pendiente');
+        $set('status', 'open');
+        $set('result', 'pending');
     }
 
     private static function statusLabel(?string $state): string
     {
         return [
-            'new' => 'Abierto',
             'open' => 'Abierto',
+            'new' => 'Abierto',
             'in_progress' => 'En curso',
             'closed' => 'Cerrado',
             'cancelled' => 'Cancelado',
@@ -231,10 +230,12 @@ class WorkOrderResource extends Resource
     private static function resultLabel(?string $state): string
     {
         return [
+            'pending' => 'Pendiente',
+            'solved' => 'Solucionado',
+            'not_solved' => 'No solucionado',
             'solucionado' => 'Solucionado',
             'pendiente' => 'Pendiente',
             'no_solucionado' => 'No solucionado',
-            'solved' => 'Solucionado',
             'ok' => 'Solucionado',
             'pending_material' => 'Pendiente',
             'requires_quote' => 'Pendiente',
@@ -246,9 +247,9 @@ class WorkOrderResource extends Resource
     private static function normalizeResultState(?string $state): string
     {
         return match ($state) {
-            'solucionado', 'solved', 'ok' => 'solucionado',
-            'no_solucionado', 'not_located', 'incident' => 'no_solucionado',
-            default => 'pendiente',
+            'solved', 'solucionado', 'ok' => 'solved',
+            'not_solved', 'no_solucionado', 'not_located', 'incident' => 'not_solved',
+            default => 'pending',
         };
     }
 

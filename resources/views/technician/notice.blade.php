@@ -13,10 +13,12 @@
         ];
 
         $workOrderResultLabels = [
+            'pending' => 'Pendiente',
+            'solved' => 'Solucionado',
+            'not_solved' => 'No solucionado',
             'solucionado' => 'Solucionado',
             'pendiente' => 'Pendiente',
             'no_solucionado' => 'No solucionado',
-            'solved' => 'Solucionado',
             'ok' => 'Solucionado',
             'pending_material' => 'Pendiente',
             'requires_quote' => 'Pendiente',
@@ -25,7 +27,7 @@
         ];
     @endphp
 
-    <a class="back-link" href="{{ route('technician.dashboard') }}#avisos">Avisos</a>
+    <a class="back-link" href="{{ route('technician.notices.index') }}">Avisos</a>
 
     <section class="route-hero {{ $notice->priority === 'urgent' ? 'urgent' : '' }}">
         <div class="badge-row">
@@ -66,10 +68,14 @@
             @else
                 <span class="button secondary">Sin telefono</span>
             @endif
-            <form method="post" action="{{ route('technician.notices.start', $notice) }}">
-                @csrf
-                <button class="button success full" type="submit">Iniciar parte</button>
-            </form>
+            @if ($notice->workOrder)
+                <a class="button success full" href="{{ route('technician.work-orders.show', $notice->workOrder) }}">Abrir parte</a>
+            @else
+                <form method="post" action="{{ route('technician.notices.start', $notice) }}">
+                    @csrf
+                    <button class="button success full" type="submit">Iniciar parte</button>
+                </form>
+            @endif
         </div>
     </section>
 

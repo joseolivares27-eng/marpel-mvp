@@ -1,19 +1,22 @@
 <x-layouts.mobile :heading="'Parte #'.$workOrder->id" :subheading="$workOrder->installation->name">
     @php
         $resultLabels = [
-            'solucionado' => 'solucionado',
-            'solved' => 'solucionado',
-            'ok' => 'solucionado',
-            'no_solucionado' => 'no_solucionado',
-            'not_located' => 'no_solucionado',
-            'incident' => 'no_solucionado',
-            'pending_material' => 'pendiente',
-            'requires_quote' => 'pendiente',
-            'pendiente' => 'pendiente',
+            'pending' => 'pending',
+            'pendiente' => 'pending',
+            'pending_material' => 'pending',
+            'requires_quote' => 'pending',
+            'solved' => 'solved',
+            'solucionado' => 'solved',
+            'ok' => 'solved',
+            'not_solved' => 'not_solved',
+            'no_solucionado' => 'not_solved',
+            'not_located' => 'not_solved',
+            'incident' => 'not_solved',
         ];
-        $defaultResult = old('result', $resultLabels[$workOrder->result] ?? 'pendiente');
+        $defaultResult = old('result', $resultLabels[$workOrder->result] ?? 'pending');
         $phone = $workOrder->notice?->contact_phone ?: $workOrder->installation->contact_phone;
         $originLabel = $workOrder->notice ? 'Aviso' : ($workOrder->review ? 'Revision' : 'Manual');
+        $hasSignature = (bool) $workOrder->customer_signature_path;
         $statusLabels = [
             'new' => 'Abierto',
             'open' => 'Abierto',
@@ -41,7 +44,7 @@
         <div class="badge-row">
             <span class="badge {{ in_array($workOrder->status, ['new', 'open'], true) ? 'danger' : 'success' }}">{{ $statusLabels[$workOrder->status] ?? $workOrder->status }}</span>
             <span class="badge neutral">{{ $originLabel }}</span>
-            @if ($workOrder->customer_signature_path)
+            @if ($hasSignature)
                 <span class="badge success">Firmado</span>
             @endif
         </div>
@@ -102,9 +105,9 @@
                 <label for="result">Resultado</label>
                 <select id="result" name="result" class="select">
                     @foreach ([
-                        'solucionado' => 'Solucionado',
-                        'pendiente' => 'Pendiente',
-                        'no_solucionado' => 'No solucionado',
+                        'pending' => 'Pendiente',
+                        'solved' => 'Solucionado',
+                        'not_solved' => 'No solucionado',
                     ] as $value => $label)
                         <option value="{{ $value }}" @selected($defaultResult === $value)>{{ $label }}</option>
                     @endforeach
@@ -152,16 +155,150 @@
             </div>
         @endif
 
+        <section class="form-card">
+            <h2>Firma del cliente</h2>
+            @if ($hasSignature)
+                <p class="problem-text">
+                    Firma guardada
+                    @if ($workOrder->customer_name)
+                        por {{ $workOrder->customer_name }}
+                    @endif
+                    @if ($workOrder->signed_at)
+                        el {{ $workOrder->signed_at->format('d/m/Y H:i') }}
+                    @endif
+                </p>
+            @else
+                <p class="job-meta">Necesaria para cerrar el parte.</p>
+            @endif
+
+            <div class="field">
+                <label for="customer_name">Nombre firmante</label>
+                <input id="customer_name" class="input" name="customer_name" value="{{ old('customer_name', $workOrder->customer_name) }}" placeholder="Nombre y apellidos">
+            </div>
+
+            <div class="field signature-panel">
+                <label for="signature-pad">Firma tactil</label>
+                <div class="signature-wrap">
+                    <canvas id="signature-pad" class="signature-pad"></canvas>
+                    <div id="signature-placeholder" class="signature-placeholder">{{ $hasSignature ? 'Firmar de nuevo si hace falta' : 'Firma aqui' }}</div>
+                </div>
+                <input id="signature_data" type="hidden" name="signature_data">
+            </div>
+
+            <div class="action-grid">
+                <button id="clear-signature" class="button secondary" type="button">Limpiar firma</button>
+                <span class="button secondary">Fecha automatica</span>
+            </div>
+        </section>
+
         <div class="action-grid">
             <button class="button secondary" name="action" value="save" type="submit">Guardar cambios</button>
         </div>
 
         <div class="sticky-action-row">
-            @if ($workOrder->customer_signature_path && $workOrder->status !== 'closed')
-                <button class="button success full" name="action" value="close" type="submit">Cerrar parte</button>
-            @else
-                <button class="button success full" name="action" value="sign" type="submit">Firmar y cerrar parte</button>
-            @endif
+            <button class="button success full" name="action" value="close" type="submit">
+                {{ $hasSignature ? 'Cerrar parte' : 'Guardar firma y cerrar parte' }}
+            </button>
         </div>
     </form>
+
+    <script>
+        (() => {
+            const canvas = document.getElementById('signature-pad');
+            const input = document.getElementById('signature_data');
+            const clearButton = document.getElementById('clear-signature');
+            const placeholder = document.getElementById('signature-placeholder');
+
+            if (! canvas || ! input) {
+                return;
+            }
+
+            const context = canvas.getContext('2d');
+            if (! context) {
+                return;
+            }
+
+            let drawing = false;
+            let hasInk = false;
+
+            const configureCanvas = () => {
+                const rect = canvas.getBoundingClientRect();
+                const ratio = Math.max(window.devicePixelRatio || 1, 1);
+
+                canvas.width = Math.floor(rect.width * ratio);
+                canvas.height = Math.floor(rect.height * ratio);
+                context.setTransform(ratio, 0, 0, ratio, 0, 0);
+                context.lineWidth = 3;
+                context.lineCap = 'round';
+                context.lineJoin = 'round';
+                context.strokeStyle = '#12233d';
+            };
+
+            const pointFromEvent = (event) => {
+                const pointer = event.touches ? event.touches[0] : event;
+                const rect = canvas.getBoundingClientRect();
+
+                return {
+                    x: pointer.clientX - rect.left,
+                    y: pointer.clientY - rect.top,
+                };
+            };
+
+            const start = (event) => {
+                event.preventDefault();
+                drawing = true;
+                hasInk = true;
+
+                if (placeholder) {
+                    placeholder.hidden = true;
+                }
+
+                const point = pointFromEvent(event);
+                context.beginPath();
+                context.moveTo(point.x, point.y);
+            };
+
+            const move = (event) => {
+                if (! drawing) {
+                    return;
+                }
+
+                event.preventDefault();
+                const point = pointFromEvent(event);
+                context.lineTo(point.x, point.y);
+                context.stroke();
+                input.value = canvas.toDataURL('image/png');
+            };
+
+            const stop = () => {
+                if (! drawing) {
+                    return;
+                }
+
+                drawing = false;
+                input.value = hasInk ? canvas.toDataURL('image/png') : '';
+            };
+
+            configureCanvas();
+            window.addEventListener('resize', configureCanvas);
+            canvas.addEventListener('mousedown', start);
+            canvas.addEventListener('mousemove', move);
+            window.addEventListener('mouseup', stop);
+            canvas.addEventListener('touchstart', start, { passive: false });
+            canvas.addEventListener('touchmove', move, { passive: false });
+            canvas.addEventListener('touchend', stop);
+            canvas.addEventListener('touchcancel', stop);
+
+            clearButton?.addEventListener('click', () => {
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                hasInk = false;
+                drawing = false;
+                input.value = '';
+
+                if (placeholder) {
+                    placeholder.hidden = false;
+                }
+            });
+        })();
+    </script>
 </x-layouts.mobile>
