@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\WorkOrder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class WorkOrderService
 {
@@ -20,6 +21,14 @@ class WorkOrderService
     public function startFromNotice(Notice $notice, User $technician): WorkOrder
     {
         return DB::transaction(function () use ($notice, $technician): WorkOrder {
+            Log::info('MARPEL_WORK_ORDER_START_FROM_NOTICE', [
+                'notice_id' => $notice->id,
+                'customer_id' => $notice->customer_id,
+                'installation_id' => $notice->installation_id,
+                'equipment_id' => $notice->equipment_id,
+                'technician_id' => $technician->id,
+            ]);
+
             $notice->update([
                 'status' => 'in_progress',
                 'assigned_user_id' => $notice->assigned_user_id ?: $technician->id,
@@ -43,6 +52,14 @@ class WorkOrderService
     public function startFromReview(Review $review, User $technician): WorkOrder
     {
         return DB::transaction(function () use ($review, $technician): WorkOrder {
+            Log::info('MARPEL_WORK_ORDER_START_FROM_REVIEW', [
+                'review_id' => $review->id,
+                'customer_id' => $review->customer_id,
+                'installation_id' => $review->installation_id,
+                'equipment_id' => $review->equipment_id,
+                'technician_id' => $technician->id,
+            ]);
+
             $review->update([
                 'status' => 'in_progress',
                 'assigned_user_id' => $review->assigned_user_id ?: $technician->id,

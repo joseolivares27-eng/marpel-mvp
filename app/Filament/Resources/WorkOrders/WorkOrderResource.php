@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\WorkOrders;
 
 use App\Filament\Resources\WorkOrders\Pages\ManageWorkOrders;
+use App\Models\Material;
 use App\Models\WorkOrder;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -14,6 +15,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -61,12 +63,40 @@ class WorkOrderResource extends Resource
             ]),
             Textarea::make('work_performed')->label('Trabajo realizado')->columnSpanFull(),
             Repeater::make('materials')->label('Materiales')->relationship()->schema([
-                Select::make('material_id')->label('Material catalogo')->relationship('material', 'name')->searchable()->preload(),
-                TextInput::make('description')->label('Descripcion')->required(),
+                Select::make('material_id')
+                    ->label('Material catalogo')
+                    ->relationship('material', 'name')
+                    ->placeholder('Material manual / no catalogado')
+                    ->searchable()
+                    ->preload()
+                    ->live()
+                    ->helperText('Opcional. Dejalo vacio para escribir un material manual/libre.')
+                    ->afterStateUpdated(function (?int $state, Set $set): void {
+                        if (! $state) {
+                            return;
+                        }
+
+                        $material = Material::find($state);
+
+                        if (! $material) {
+                            return;
+                        }
+
+                        $set('description', $material->name);
+                        $set('unit_cost', $material->cost_price);
+                        $set('unit_price', $material->sale_price);
+                    }),
+                TextInput::make('description')
+                    ->label('Descripcion manual/libre')
+                    ->placeholder('Opcional. Ej. fotocelula, mando, cableado...'),
                 TextInput::make('quantity')->label('Cantidad')->numeric()->default(1),
                 TextInput::make('unit_cost')->label('Coste')->numeric()->prefix('EUR')->default(0),
                 TextInput::make('unit_price')->label('Venta')->numeric()->prefix('EUR')->default(0),
-            ])->columns(2)->columnSpanFull(),
+            ])
+                ->mutateRelationshipDataBeforeCreateUsing(fn (array $data): ?array => self::normalizeMaterialLine($data))
+                ->mutateRelationshipDataBeforeSaveUsing(fn (array $data): ?array => self::normalizeMaterialLine($data))
+                ->columns(2)
+                ->columnSpanFull(),
             FileUpload::make('customer_signature_path')->label('Firma cliente')->disk('public')->directory('signatures'),
             TextInput::make('customer_name')->label('Firma nombre'),
             DateTimePicker::make('signed_at')->label('Firmado'),
@@ -93,6 +123,35 @@ class WorkOrderResource extends Resource
                     DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>|null
+     */
+    private static function normalizeMaterialLine(array $data): ?array
+    {
+        $materialId = $data['material_id'] ?? null;
+        $description = trim((string) ($data['description'] ?? ''));
+        $quantity = (float) ($data['quantity'] ?? 0);
+        $unitCost = (float) ($data['unit_cost'] ?? 0);
+        $unitPrice = (float) ($data['unit_price'] ?? 0);
+
+        if (! $materialId && $description === '' && $unitCost === 0.0 && $unitPrice === 0.0) {
+            return null;
+        }
+
+        if ($materialId && $material = Material::find($materialId)) {
+            $data['description'] = $description !== '' ? $description : $material->name;
+            $data['unit_cost'] = $unitCost > 0 ? $unitCost : $material->cost_price;
+            $data['unit_price'] = $unitPrice > 0 ? $unitPrice : $material->sale_price;
+        } else {
+            $data['description'] = $description !== '' ? $description : null;
+        }
+
+        $data['quantity'] = $quantity > 0 ? $quantity : 1;
+
+        return $data;
     }
 
     public static function getPages(): array

@@ -211,7 +211,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('work_order_id')->constrained()->cascadeOnDelete();
             $table->foreignId('material_id')->nullable()->constrained()->nullOnDelete();
-            $table->string('description');
+            $table->string('description')->nullable();
             $table->decimal('quantity', 10, 2)->default(1);
             $table->decimal('unit_cost', 10, 2)->default(0);
             $table->decimal('unit_price', 10, 2)->default(0);
