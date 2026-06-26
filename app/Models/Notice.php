@@ -14,7 +14,29 @@ class Notice extends Model
 
     protected static function booted(): void
     {
+        static::creating(function (Notice $notice): void {
+            $notice->status = 'pending';
+        });
+
         static::saving(fn (Notice $notice) => app(\App\Services\OperationalContextValidator::class)->validate($notice));
+
+        static::saved(function (Notice $notice): void {
+            if (! $notice->shouldCreateWorkOrderAutomatically()) {
+                return;
+            }
+
+            if ($notice->workOrder()->exists()) {
+                return;
+            }
+
+            app(\App\Services\WorkOrderService::class)->createAutomaticallyFromNotice($notice);
+        });
+
+        static::deleting(function (Notice $notice): void {
+            $notice->workOrders()
+                ->get()
+                ->each(fn (WorkOrder $workOrder) => WorkOrder::withoutEvents(fn () => $workOrder->delete()));
+        });
     }
 
     protected $fillable = [
@@ -84,5 +106,14 @@ class Notice extends Model
     public function quotes(): HasMany
     {
         return $this->hasMany(Quote::class);
+    }
+
+    public function shouldCreateWorkOrderAutomatically(): bool
+    {
+        if (! $this->assigned_user_id && ! $this->scheduled_at) {
+            return false;
+        }
+
+        return ! in_array($this->status, ['completed', 'resolved', 'cancelled'], true);
     }
 }

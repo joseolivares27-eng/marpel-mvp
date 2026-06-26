@@ -7,14 +7,17 @@ use App\Models\Material;
 use App\Models\Notice;
 use App\Models\Review;
 use App\Models\WorkOrder;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
@@ -23,6 +26,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class WorkOrderResource extends Resource
 {
@@ -84,30 +88,45 @@ class WorkOrderResource extends Resource
             Select::make('quote_id')->label('Presupuesto')->relationship('quote', 'number')->searchable()->preload(),
             Select::make('status')->label('Estado')->options([
                 'open' => 'Abierto',
-                'in_progress' => 'En curso',
                 'closed' => 'Cerrado',
-                'cancelled' => 'Cancelado',
             ])
+                ->disabled(fn (?WorkOrder $record): bool => self::closedCriticalFieldsAreLocked($record))
                 ->default('open')
                 ->afterStateHydrated(function (Select $component, ?string $state): void {
-                    if ($state === 'new') {
+                    if (in_array($state, ['new', 'in_progress'], true)) {
                         $component->state('open');
                     }
+
+                    if (in_array($state, ['cancelled', 'resolved', 'completed'], true)) {
+                        $component->state('closed');
+                    }
                 })
+                ->live()
                 ->required(),
-            DateTimePicker::make('started_at')->label('Fecha inicio'),
-            DateTimePicker::make('finished_at')->label('Fecha fin'),
+            DateTimePicker::make('started_at')
+                ->label('Fecha inicio')
+                ->disabled(fn (?WorkOrder $record): bool => self::closedCriticalFieldsAreLocked($record)),
+            DateTimePicker::make('finished_at')
+                ->label('Fecha fin')
+                ->disabled(fn (?WorkOrder $record): bool => self::closedCriticalFieldsAreLocked($record))
+                ->helperText('Si se deja vacia al cerrar, se asigna automaticamente.'),
             Select::make('result')->label('Resultado')->options([
                 'pending' => 'Pendiente',
                 'solved' => 'Solucionado',
-                'not_solved' => 'No solucionado',
+                'unresolved' => 'No solucionado',
+                'cancelled' => 'Anulado',
             ])
+                ->disabled(fn (?WorkOrder $record): bool => self::closedCriticalFieldsAreLocked($record))
                 ->default('pending')
                 ->afterStateHydrated(function (Select $component, ?string $state): void {
                     $component->state(self::normalizeResultState($state));
                 })
+                ->live()
                 ->required(),
-            Textarea::make('work_performed')->label('Trabajo realizado')->columnSpanFull(),
+            Textarea::make('work_performed')
+                ->label('Trabajo realizado')
+                ->disabled(fn (?WorkOrder $record): bool => self::closedCriticalFieldsAreLocked($record))
+                ->columnSpanFull(),
             Repeater::make('materials')->label('Materiales')->relationship()->schema([
                 Select::make('material_id')
                     ->label('Material catalogo')
@@ -143,8 +162,19 @@ class WorkOrderResource extends Resource
                 ->mutateRelationshipDataBeforeSaveUsing(fn (array $data): ?array => self::normalizeMaterialLine($data))
                 ->columns(2)
                 ->columnSpanFull(),
-            TextInput::make('customer_name')->label('Nombre firmante'),
-            DateTimePicker::make('signed_at')->label('Firmado')->disabled()->dehydrated(false),
+            TextInput::make('customer_name')
+                ->label('Nombre firmante')
+                ->disabled(fn (?WorkOrder $record): bool => self::closedCriticalFieldsAreLocked($record))
+                ->helperText('Obligatorio solo si se cierra como Solucionado.'),
+            FileUpload::make('customer_signature_path')
+                ->label('Firma cliente')
+                ->disabled(fn (?WorkOrder $record): bool => self::closedCriticalFieldsAreLocked($record))
+                ->disk('public')
+                ->directory('signatures')
+                ->image()
+                ->downloadable()
+                ->openable()
+                ->helperText('Obligatoria solo si se cierra como Solucionado. La fecha de firma se guarda automaticamente.'),
         ])->columns(2);
     }
 
@@ -156,14 +186,36 @@ class WorkOrderResource extends Resource
                 TextColumn::make('origin_label')->label('Origen')->badge(),
                 TextColumn::make('status')->label('Estado')->badge()->formatStateUsing(fn (?string $state): string => self::statusLabel($state))->sortable(),
                 TextColumn::make('result')->label('Resultado')->badge()->formatStateUsing(fn (?string $state): string => self::resultLabel($state))->sortable(),
+                TextColumn::make('pdf_path')
+                    ->label('PDF')
+                    ->formatStateUsing(fn (?string $state, WorkOrder $record): string => ($record->status === 'closed' && $state) ? 'Descargar' : '-')
+                    ->url(fn (WorkOrder $record): ?string => ($record->status === 'closed' && $record->pdf_path) ? route('work-orders.pdf.download', $record) : null),
                 TextColumn::make('customer.legal_name')->label('Cliente')->searchable(),
                 TextColumn::make('installation.name')->label('Instalacion')->searchable(),
                 TextColumn::make('equipment.name')->label('Equipo')->searchable(),
                 TextColumn::make('technician.name')->label('Tecnico')->searchable(),
+                TextColumn::make('started_at')->label('Fecha inicio')->dateTime('d/m/Y H:i')->sortable(),
                 TextColumn::make('finished_at')->label('Cierre')->dateTime('d/m/Y H:i')->sortable(),
             ])
             ->recordActions([
-                EditAction::make(),
+                Action::make('download_pdf')
+                    ->label('Descargar PDF')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('success')
+                    ->url(fn (WorkOrder $record): string => route('work-orders.pdf.download', $record))
+                    ->visible(fn (WorkOrder $record): bool => $record->status === 'closed' && filled($record->pdf_path)),
+                EditAction::make()
+                    ->using(function (WorkOrder $record, array $data): WorkOrder {
+                        try {
+                            $record->update($data);
+
+                            return $record;
+                        } catch (ValidationException $exception) {
+                            self::notifyValidationError($exception);
+
+                            throw $exception;
+                        }
+                    }),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
@@ -190,6 +242,7 @@ class WorkOrderResource extends Resource
         $set('equipment_id', $notice->equipment_id);
         $set('assigned_user_id', $notice->assigned_user_id);
         $set('observations', $notice->description);
+        $set('started_at', $notice->scheduled_at);
         $set('status', 'open');
         $set('result', 'pending');
     }
@@ -221,9 +274,11 @@ class WorkOrderResource extends Resource
         return [
             'open' => 'Abierto',
             'new' => 'Abierto',
-            'in_progress' => 'En curso',
+            'in_progress' => 'Abierto',
             'closed' => 'Cerrado',
-            'cancelled' => 'Cancelado',
+            'cancelled' => 'Cerrado',
+            'resolved' => 'Cerrado',
+            'completed' => 'Cerrado',
         ][$state] ?? ($state ?: 'Abierto');
     }
 
@@ -232,7 +287,10 @@ class WorkOrderResource extends Resource
         return [
             'pending' => 'Pendiente',
             'solved' => 'Solucionado',
+            'unresolved' => 'No solucionado',
             'not_solved' => 'No solucionado',
+            'cancelled' => 'Anulado',
+            'anulado' => 'Anulado',
             'solucionado' => 'Solucionado',
             'pendiente' => 'Pendiente',
             'no_solucionado' => 'No solucionado',
@@ -248,7 +306,8 @@ class WorkOrderResource extends Resource
     {
         return match ($state) {
             'solved', 'solucionado', 'ok' => 'solved',
-            'not_solved', 'no_solucionado', 'not_located', 'incident' => 'not_solved',
+            'not_solved', 'unresolved', 'no_solucionado', 'not_located', 'incident' => 'unresolved',
+            'cancelled', 'anulado' => 'cancelled',
             default => 'pending',
         };
     }
@@ -294,6 +353,27 @@ class WorkOrderResource extends Resource
         $data['quantity'] = $quantity > 0 ? $quantity : 1;
 
         return $data;
+    }
+
+    private static function notifyValidationError(ValidationException $exception): void
+    {
+        $message = collect($exception->errors())
+            ->flatten()
+            ->filter()
+            ->implode("\n");
+
+        Notification::make()
+            ->danger()
+            ->title('No se pudo guardar el parte')
+            ->body($message ?: 'Revisa los campos obligatorios del parte.')
+            ->persistent()
+            ->send();
+    }
+
+    private static function closedCriticalFieldsAreLocked(?WorkOrder $record): bool
+    {
+        return $record?->status === 'closed'
+            && auth()->user()?->role !== 'admin';
     }
 
     public static function getPages(): array

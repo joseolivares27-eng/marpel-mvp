@@ -14,5 +14,5 @@ class ManagementDashboard extends Page
 
     protected static ?int $navigationSort = 1;
 
-    protected static string $view = 'filament.pages.management-dashboard';
+    protected string $view = 'filament.pages.management-dashboard';
 }

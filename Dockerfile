@@ -8,6 +8,7 @@ RUN npm run build
 FROM composer:2 AS vendor
 WORKDIR /app
 COPY composer.json ./
+RUN apk add --no-cache icu-dev && docker-php-ext-install intl
 RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts
 
 FROM php:8.4-fpm-alpine AS app
@@ -39,6 +40,7 @@ COPY docker/supervisor/marpel.conf /etc/supervisor/conf.d/marpel.conf
 
 RUN chmod +x docker/php/entrypoint.sh \
     && composer dump-autoload --optimize \
+    && php artisan filament:assets \
     && mkdir -p storage/app/private storage/app/public storage/framework/cache/data storage/framework/sessions storage/framework/testing storage/framework/views storage/logs bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache
 

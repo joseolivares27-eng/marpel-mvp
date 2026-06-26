@@ -8,9 +8,10 @@ use Filament\Resources\Pages\Page;
 
 class ViewEquipmentHistory extends Page
 {
-    protected static string $resource = EquipmentResource::class;
+    protected static string 
+    $resource = EquipmentResource::class;
 
-    protected static string $view = 'filament.resources.equipment.pages.view-equipment-history';
+    protected  string $view = 'filament.resources.equipment.pages.view-equipment-history';
 
     public Equipment $record;
 

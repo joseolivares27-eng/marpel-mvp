@@ -20,6 +20,7 @@
     $workOrderResultLabels = [
         'pending' => 'Pendiente',
         'solved' => 'Solucionado',
+        'unresolved' => 'No solucionado',
         'not_solved' => 'No solucionado',
         'solucionado' => 'Solucionado',
         'pendiente' => 'Pendiente',

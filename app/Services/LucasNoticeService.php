@@ -62,7 +62,7 @@ class LucasNoticeService
                 ]);
             }
 
-            return Notice::create([
+            $notice = Notice::create([
                 'customer_id' => $customer->id,
                 'installation_id' => $installation->id,
                 'reported_by' => $contactName,
@@ -73,6 +73,10 @@ class LucasNoticeService
                 'status' => 'pending',
                 'description' => $this->fullDescription($payload),
             ]);
+
+            app(WorkOrderService::class)->createAutomaticallyFromNotice($notice);
+
+            return $notice->refresh();
         });
     }
 

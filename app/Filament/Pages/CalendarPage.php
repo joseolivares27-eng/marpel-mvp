@@ -14,5 +14,5 @@ class CalendarPage extends Page
 
     protected static ?int $navigationSort = 2;
 
-    protected static string $view = 'filament.pages.calendar-page';
+    protected string $view = 'filament.pages.calendar-page';
 }

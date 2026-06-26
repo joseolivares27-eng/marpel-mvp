@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TechnicianController;
+use App\Http\Controllers\WorkOrderPdfController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => auth()->check() ? redirect()->route('technician.dashboard') : redirect()->route('login'));
@@ -21,4 +22,5 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/tecnico/partes/{workOrder}', [TechnicianController::class, 'updateWorkOrder'])->name('technician.work-orders.update');
     Route::get('/tecnico/partes/{workOrder}/firma', [TechnicianController::class, 'signature'])->name('technician.work-orders.signature');
     Route::post('/tecnico/partes/{workOrder}/firma', [TechnicianController::class, 'storeSignature'])->name('technician.work-orders.signature.store');
+    Route::get('/partes/{workOrder}/pdf', WorkOrderPdfController::class)->name('work-orders.pdf.download');
 });

@@ -17,10 +17,39 @@ class WorkOrder extends Model
         static::saving(function (WorkOrder $workOrder): void {
             app(\App\Services\OperationalContextValidator::class)->validate($workOrder);
 
-            if ($workOrder->isDirty('status') && $workOrder->status === 'closed' && ! $workOrder->customer_signature_path) {
-                throw ValidationException::withMessages([
-                    'customer_signature_path' => 'No se puede cerrar el parte sin firma del cliente.',
-                ]);
+            if ($workOrder->status !== null) {
+                $workOrder->status = $workOrder->normalizeStatusForStorage($workOrder->status);
+            }
+
+            if ($workOrder->result !== null) {
+                $workOrder->result = $workOrder->normalizeResultForStorage($workOrder->result);
+            }
+
+            $workOrder->prepareClosingData();
+            $workOrder->validateClosingData();
+        });
+
+        static::saved(function (WorkOrder $workOrder): void {
+            if ($workOrder->status !== 'closed') {
+                return;
+            }
+
+            if (! $workOrder->shouldFinalizeClosedWorkOrder()) {
+                return;
+            }
+
+            app(\App\Services\WorkOrderClosureFinalizer::class)->finalize($workOrder);
+        });
+
+        static::deleting(function (WorkOrder $workOrder): void {
+            if (! $workOrder->notice_id) {
+                return;
+            }
+
+            $notice = $workOrder->notice()->first();
+
+            if ($notice) {
+                Notice::withoutEvents(fn () => $notice->delete());
             }
         });
     }
@@ -42,6 +71,7 @@ class WorkOrder extends Model
         'customer_name',
         'customer_signature_path',
         'signed_at',
+        'pdf_path',
     ];
 
     protected function casts(): array
@@ -114,5 +144,100 @@ class WorkOrder extends Model
         }
 
         return 'Manual';
+    }
+
+    private function validateClosingData(): void
+    {
+        if ($this->status !== 'closed') {
+            return;
+        }
+
+        if (! $this->started_at) {
+            throw ValidationException::withMessages([
+                'started_at' => 'Indica fecha de inicio.',
+            ]);
+        }
+
+        if (! in_array($this->result, ['solved', 'unresolved', 'cancelled'], true)) {
+            throw ValidationException::withMessages([
+                'result' => 'Para cerrar el parte debes indicar resultado: Solucionado, No solucionado o Anulado.',
+            ]);
+        }
+
+        if (! $this->finished_at) {
+            throw ValidationException::withMessages([
+                'finished_at' => 'Indica fecha de fin o se asignara automaticamente.',
+            ]);
+        }
+
+        if (trim((string) $this->work_performed) === '') {
+            throw ValidationException::withMessages([
+                'work_performed' => 'Indica el trabajo realizado.',
+            ]);
+        }
+
+        if ($this->result === 'solved' && ! $this->customer_name) {
+            throw ValidationException::withMessages([
+                'customer_name' => 'Indica el nombre del firmante.',
+            ]);
+        }
+
+        if ($this->result === 'solved' && ! $this->customer_signature_path) {
+            throw ValidationException::withMessages([
+                'customer_signature_path' => 'El cliente debe firmar para cerrar como solucionado.',
+            ]);
+        }
+    }
+
+    private function prepareClosingData(): void
+    {
+        if ($this->status !== 'closed') {
+            return;
+        }
+
+        if (! $this->finished_at) {
+            $this->finished_at = now();
+        }
+
+        if ($this->result === 'solved' && $this->customer_signature_path) {
+            $this->signed_at = $this->finished_at;
+        }
+    }
+
+    private function normalizeStatusForStorage(string $status): string
+    {
+        return match ($status) {
+            'closed', 'cerrado', 'cancelled', 'resolved', 'completed' => 'closed',
+            default => 'open',
+        };
+    }
+
+    private function normalizeResultForStorage(string $result): string
+    {
+        return match ($result) {
+            'solved', 'solucionado', 'ok' => 'solved',
+            'not_solved', 'unresolved', 'no_solucionado', 'not_located', 'incident' => 'unresolved',
+            'cancelled', 'anulado' => 'cancelled',
+            default => $result,
+        };
+    }
+
+    private function shouldFinalizeClosedWorkOrder(): bool
+    {
+        if (! $this->pdf_path) {
+            return true;
+        }
+
+        return $this->wasChanged([
+            'status',
+            'result',
+            'started_at',
+            'finished_at',
+            'work_performed',
+            'observations',
+            'customer_name',
+            'customer_signature_path',
+            'signed_at',
+        ]);
     }
 }

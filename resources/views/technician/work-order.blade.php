@@ -8,10 +8,13 @@
             'solved' => 'solved',
             'solucionado' => 'solved',
             'ok' => 'solved',
-            'not_solved' => 'not_solved',
-            'no_solucionado' => 'not_solved',
-            'not_located' => 'not_solved',
-            'incident' => 'not_solved',
+            'not_solved' => 'unresolved',
+            'unresolved' => 'unresolved',
+            'no_solucionado' => 'unresolved',
+            'not_located' => 'unresolved',
+            'incident' => 'unresolved',
+            'cancelled' => 'cancelled',
+            'anulado' => 'cancelled',
         ];
         $defaultResult = old('result', $resultLabels[$workOrder->result] ?? 'pending');
         $phone = $workOrder->notice?->contact_phone ?: $workOrder->installation->contact_phone;
@@ -84,6 +87,12 @@
                 <span class="button secondary">Sin telefono</span>
             @endif
         </div>
+
+        @if ($workOrder->status === 'closed')
+            <div class="action-grid">
+                <a class="button full" href="{{ route('work-orders.pdf.download', $workOrder) }}">Descargar PDF</a>
+            </div>
+        @endif
     </section>
 
     <form method="post" action="{{ route('technician.work-orders.update', $workOrder) }}" enctype="multipart/form-data">
@@ -107,7 +116,8 @@
                     @foreach ([
                         'pending' => 'Pendiente',
                         'solved' => 'Solucionado',
-                        'not_solved' => 'No solucionado',
+                        'unresolved' => 'No solucionado',
+                        'cancelled' => 'Anulado',
                     ] as $value => $label)
                         <option value="{{ $value }}" @selected($defaultResult === $value)>{{ $label }}</option>
                     @endforeach
@@ -168,7 +178,7 @@
                     @endif
                 </p>
             @else
-                <p class="job-meta">Necesaria para cerrar el parte.</p>
+                <p class="job-meta">Necesaria si el resultado es Solucionado.</p>
             @endif
 
             <div class="field">

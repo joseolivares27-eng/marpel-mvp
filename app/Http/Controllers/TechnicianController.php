@@ -114,7 +114,7 @@ class TechnicianController extends Controller
         $validated = $request->validate([
             'work_performed' => ['nullable', 'string'],
             'observations' => ['nullable', 'string'],
-            'result' => ['nullable', 'string', 'in:pending,solved,not_solved'],
+            'result' => ['nullable', 'string', 'in:pending,solved,not_solved,unresolved,cancelled'],
             'customer_name' => ['nullable', 'string', 'max:255'],
             'signature_data' => ['nullable', 'string'],
             'materials' => ['array'],
@@ -161,10 +161,30 @@ class TechnicianController extends Controller
         $workOrder->refresh();
 
         if ($request->input('action') === 'close') {
-            if (! $workOrder->customer_signature_path) {
+            $validated['result'] = $this->normalizeWorkOrderResult($validated['result'] ?? null);
+
+            if (! in_array($validated['result'], ['solved', 'unresolved', 'cancelled'], true)) {
+                return back()
+                    ->withErrors(['result' => 'Para cerrar el parte debes indicar resultado: Solucionado, No solucionado o Anulado.'])
+                    ->withInput();
+            }
+
+            if (! $workOrder->started_at) {
+                return back()
+                    ->withErrors(['started_at' => 'Para cerrar el parte debes indicar una fecha inicio valida.'])
+                    ->withInput();
+            }
+
+            if (trim((string) ($validated['work_performed'] ?? '')) === '') {
+                return back()
+                    ->withErrors(['work_performed' => 'Para cerrar el parte debes rellenar el trabajo realizado.'])
+                    ->withInput();
+            }
+
+            if ($validated['result'] === 'solved' && ! $workOrder->customer_signature_path) {
                 if (empty($validated['customer_name']) || empty($validated['signature_data'])) {
                     return back()
-                        ->withErrors(['signature_data' => 'Falta el nombre y la firma del cliente para cerrar el parte.'])
+                        ->withErrors(['signature_data' => 'Para cerrar el parte debes indicar nombre del firmante y firma.'])
                         ->withInput();
                 }
 
@@ -175,6 +195,10 @@ class TechnicianController extends Controller
                         ->withErrors(['signature_data' => 'La firma no es valida. Limpia la firma y vuelve a firmar.'])
                         ->withInput();
                 }
+            } elseif ($validated['result'] === 'solved' && empty($validated['customer_name']) && empty($workOrder->customer_name)) {
+                return back()
+                    ->withErrors(['customer_name' => 'Para cerrar el parte debes indicar nombre del firmante y firma.'])
+                    ->withInput();
             }
 
             $service->close($workOrder->refresh(), $validated);
@@ -210,7 +234,7 @@ class TechnicianController extends Controller
         $service->close($workOrder, [
             'work_performed' => $workOrder->work_performed,
             'observations' => $workOrder->observations,
-            'result' => $workOrder->result ?: 'pending',
+            'result' => in_array($workOrder->result, ['solved', 'unresolved', 'not_solved', 'cancelled'], true) ? $workOrder->result : 'solved',
         ]);
 
         return redirect()->route('technician.dashboard')->with('status', 'Parte firmado y cerrado.');
@@ -251,5 +275,15 @@ class TechnicianController extends Controller
         }
 
         return true;
+    }
+
+    private function normalizeWorkOrderResult(?string $result): string
+    {
+        return match ($result) {
+            'solved', 'solucionado', 'ok' => 'solved',
+            'not_solved', 'unresolved', 'no_solucionado', 'not_located', 'incident' => 'unresolved',
+            'cancelled', 'anulado' => 'cancelled',
+            default => 'pending',
+        };
     }
 }

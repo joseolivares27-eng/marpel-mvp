@@ -41,9 +41,12 @@ class NoticeResource extends Resource
             Select::make('customer_id')->label('Cliente')->relationship('customer', 'legal_name')->searchable()->preload()->required(),
             Select::make('installation_id')->label('Instalacion')->relationship('installation', 'name')->searchable()->preload()->required(),
             Select::make('equipment_id')->label('Equipo')->relationship('equipment', 'name')->searchable()->preload(),
-            Select::make('contract_id')->label('Contrato')->relationship('contract', 'number')->searchable()->preload(),
-            TextInput::make('reported_by')->label('Avisado por'),
-            TextInput::make('contact_name')->label('Contacto'),
+            TextInput::make('reported_by')
+                ->label('Avisado por')
+                ->helperText('Persona que comunica la incidencia. Ej. vecino, presidente, administrador.'),
+            TextInput::make('contact_name')
+                ->label('Contacto en instalacion')
+                ->helperText('Persona a la que puede llamar el tecnico si es diferente.'),
             TextInput::make('contact_phone')->label('Telefono contacto')->tel(),
             Select::make('channel')->label('Origen')->options([
                 'phone' => 'Telefono',

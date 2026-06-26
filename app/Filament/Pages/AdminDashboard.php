@@ -16,5 +16,5 @@ class AdminDashboard extends Page
 
     protected static ?string $slug = '/';
 
-    protected static string $view = 'filament.pages.admin-dashboard';
+    protected string $view = 'filament.pages.admin-dashboard';
 }

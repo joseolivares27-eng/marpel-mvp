@@ -4,6 +4,7 @@ namespace App\Filament\Resources\WorkOrders\Pages;
 
 use App\Filament\Resources\WorkOrders\WorkOrderResource;
 use App\Models\WorkOrder;
+use App\Services\WorkOrderService;
 use Filament\Actions\CreateAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ManageRecords;
@@ -20,16 +21,20 @@ class ManageWorkOrders extends ManageRecords
     {
         return [
             'todos' => Tab::make('Todos')
-                ->badge(fn (): int => WorkOrder::query()->count()),
+                ->modifyQueryUsing(fn (Builder $query): Builder => $this->activeWorkOrders($query))
+                ->badge(fn (): int => $this->activeWorkOrders(WorkOrder::query())->count()),
             'avisos' => Tab::make('Avisos')
-                ->modifyQueryUsing(fn (Builder $query): Builder => $query->whereNotNull('notice_id'))
-                ->badge(fn (): int => WorkOrder::query()->whereNotNull('notice_id')->count()),
+                ->modifyQueryUsing(fn (Builder $query): Builder => $this->activeWorkOrders($query)->whereNotNull('notice_id'))
+                ->badge(fn (): int => $this->activeWorkOrders(WorkOrder::query())->whereNotNull('notice_id')->count()),
             'revisiones' => Tab::make('Revisiones')
-                ->modifyQueryUsing(fn (Builder $query): Builder => $query->whereNotNull('review_id'))
-                ->badge(fn (): int => WorkOrder::query()->whereNotNull('review_id')->count()),
+                ->modifyQueryUsing(fn (Builder $query): Builder => $this->activeWorkOrders($query)->whereNotNull('review_id'))
+                ->badge(fn (): int => $this->activeWorkOrders(WorkOrder::query())->whereNotNull('review_id')->count()),
             'manuales' => Tab::make('Manuales')
-                ->modifyQueryUsing(fn (Builder $query): Builder => $query->whereNull('notice_id')->whereNull('review_id'))
-                ->badge(fn (): int => WorkOrder::query()->whereNull('notice_id')->whereNull('review_id')->count()),
+                ->modifyQueryUsing(fn (Builder $query): Builder => $this->activeWorkOrders($query)->whereNull('notice_id')->whereNull('review_id'))
+                ->badge(fn (): int => $this->activeWorkOrders(WorkOrder::query())->whereNull('notice_id')->whereNull('review_id')->count()),
+            'cerrados' => Tab::make('Cerrados')
+                ->modifyQueryUsing(fn (Builder $query): Builder => $query->where('status', 'closed'))
+                ->badge(fn (): int => WorkOrder::query()->where('status', 'closed')->count()),
         ];
     }
 
@@ -40,10 +45,16 @@ class ManageWorkOrders extends ManageRecords
 
     protected function getHeaderActions(): array
     {
+        $page = $this;
+
         return [
             CreateAction::make()
-                ->using(function (array $data, string $model): Model {
+                ->using(function (array $data, string $model) use ($page): Model {
                     try {
+                        if ($page->shouldCreateNoticeWorkOrder($data)) {
+                            return app(WorkOrderService::class)->createNoticeWorkOrderFromWorkOrderData($data);
+                        }
+
                         return $model::create($data);
                     } catch (Throwable $exception) {
                         report($exception);
@@ -60,5 +71,22 @@ class ManageWorkOrders extends ManageRecords
                 })
                 ->successNotificationTitle('Parte creado'),
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function shouldCreateNoticeWorkOrder(array $data): bool
+    {
+        return blank($data['review_id'] ?? null)
+            && ($this->activeTab === 'avisos' || filled($data['notice_id'] ?? null));
+    }
+
+    private function activeWorkOrders(Builder $query): Builder
+    {
+        return $query->where(function (Builder $query): void {
+            $query->whereNull('status')
+                ->orWhere('status', '!=', 'closed');
+        });
     }
 }
