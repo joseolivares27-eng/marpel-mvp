@@ -71,6 +71,33 @@ class Installation extends Model
         return 'https://www.google.com/maps/search/?api=1&query='.urlencode($query);
     }
 
+    public function googleMapsAppUrl(): string
+    {
+        $query = $this->latitude && $this->longitude
+            ? "{$this->latitude},{$this->longitude}"
+            : $this->address.' '.$this->city.' '.$this->postal_code;
+
+        return 'comgooglemaps://?daddr='.urlencode($query).'&directionsmode=driving';
+    }
+
+    public function googleMapsAndroidUrl(): string
+    {
+        $query = $this->latitude && $this->longitude
+            ? "{$this->latitude},{$this->longitude}"
+            : $this->address.' '.$this->city.' '.$this->postal_code;
+
+        return 'google.navigation:q='.urlencode($query);
+    }
+
+    public function appleMapsUrl(): string
+    {
+        $query = $this->latitude && $this->longitude
+            ? "{$this->latitude},{$this->longitude}"
+            : $this->address.' '.$this->city.' '.$this->postal_code;
+
+        return 'https://maps.apple.com/?daddr='.urlencode($query).'&dirflg=d';
+    }
+
     public function wazeUrl(): string
     {
         $query = $this->latitude && $this->longitude

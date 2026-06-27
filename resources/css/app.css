@@ -685,45 +685,75 @@ button {
     content: "Ocultar";
 }
 
-.photo-picker {
+.photo-picker-label {
+    text-align: center;
+}
+
+.visually-hidden-file {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.photo-picker-count {
+    margin: 10px 0 0;
+    color: var(--marpel-muted);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.camera-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    min-height: 96px;
-    border: 1.5px dashed #9db3da;
-    border-radius: 13px;
-    background: #f3f7ff;
-    color: var(--marpel-blue-dark);
-    font-size: 14px;
-    font-weight: 900;
-    text-align: center;
+    background: #000;
 }
 
-.photo-picker .photo-picker-icon {
-    font-size: 24px;
-}
-
-.photo-picker {
-    position: relative;
-}
-
-.photo-picker input[type="file"] {
-    position: absolute;
-    inset: 0;
+.camera-overlay video {
     width: 100%;
     height: 100%;
-    margin: 0;
-    opacity: 0;
-    cursor: pointer;
+    object-fit: cover;
 }
 
-.photo-picker-count {
+.camera-error {
+    position: absolute;
+    top: 50%;
+    left: 16px;
+    right: 16px;
     margin: 0;
-    color: var(--marpel-muted);
-    font-size: 12px;
-    font-weight: 700;
+    padding: 14px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.95);
+    color: #9b2226;
+    font-size: 14px;
+    font-weight: 800;
+    text-align: center;
+    transform: translateY(-50%);
+}
+
+.camera-controls {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    gap: 12px;
+    padding: 16px calc(16px + env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.55));
+}
+
+.camera-controls .button {
+    flex: 1;
 }
 
 .photo-grid {

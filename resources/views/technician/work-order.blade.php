@@ -76,7 +76,7 @@
         </div>
 
         <div class="action-grid">
-            <a class="button" href="{{ $workOrder->installation->wazeUrl() }}" target="_blank" rel="noreferrer">🧭 Abrir Waze</a>
+            <x-nav-buttons :installation="$workOrder->installation" label="Abrir Waze" />
             @if ($phone)
                 <a class="button secondary" href="tel:{{ $phone }}">📞 Llamar</a>
             @else
@@ -156,12 +156,22 @@
 
         <section class="form-card">
             <h2>Fotos</h2>
-            <label class="photo-picker" for="photos">
-                <span class="photo-picker-icon">📷</span>
-                <span>Hacer foto o elegir de galeria</span>
-                <input id="photos" name="photos[]" type="file" accept="image/*" multiple>
-            </label>
+            <div class="action-grid">
+                <button type="button" class="button" id="open-camera-button">📷 Hacer foto</button>
+                <label class="button secondary photo-picker-label" for="photos">🖼️ Elegir de galeria</label>
+            </div>
+            <input id="photos" name="photos[]" type="file" accept="image/*" multiple class="visually-hidden-file">
             <p class="photo-picker-count" id="photo-picker-count"></p>
+
+            <div class="camera-overlay" id="camera-overlay" hidden>
+                <video id="camera-video" autoplay playsinline muted></video>
+                <canvas id="camera-canvas" hidden></canvas>
+                <p class="camera-error" id="camera-error" hidden></p>
+                <div class="camera-controls">
+                    <button type="button" class="button secondary" id="camera-close">Cerrar</button>
+                    <button type="button" class="button success" id="camera-capture">Capturar</button>
+                </div>
+            </div>
         </section>
 
         @if ($workOrder->photos->isNotEmpty())
@@ -297,9 +307,83 @@
                 return;
             }
 
-            photoInput.addEventListener('change', () => {
+            const updateCounter = () => {
                 const count = photoInput.files?.length ?? 0;
-                counter.textContent = count > 0 ? `${count} foto${count > 1 ? 's' : ''} seleccionada${count > 1 ? 's' : ''}` : '';
+                counter.textContent = count > 0 ? `${count} foto${count > 1 ? 's' : ''} lista${count > 1 ? 's' : ''}` : '';
+            };
+
+            photoInput.addEventListener('change', updateCounter);
+
+            const openCameraButton = document.getElementById('open-camera-button');
+            const overlay = document.getElementById('camera-overlay');
+            const video = document.getElementById('camera-video');
+            const canvas = document.getElementById('camera-canvas');
+            const closeButton = document.getElementById('camera-close');
+            const captureButton = document.getElementById('camera-capture');
+            const errorBox = document.getElementById('camera-error');
+
+            if (! openCameraButton || ! overlay || ! video || ! canvas || ! closeButton || ! captureButton) {
+                return;
+            }
+
+            let stream = null;
+
+            const stopStream = () => {
+                stream?.getTracks().forEach((track) => track.stop());
+                stream = null;
+            };
+
+            const closeCamera = () => {
+                stopStream();
+                overlay.hidden = true;
+                video.srcObject = null;
+            };
+
+            const addCapturedFile = (file) => {
+                const dataTransfer = new DataTransfer();
+
+                Array.from(photoInput.files || []).forEach((existing) => dataTransfer.items.add(existing));
+                dataTransfer.items.add(file);
+                photoInput.files = dataTransfer.files;
+                updateCounter();
+            };
+
+            openCameraButton.addEventListener('click', async () => {
+                overlay.hidden = false;
+                errorBox.hidden = true;
+
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: 'environment' },
+                        audio: false,
+                    });
+                    video.srcObject = stream;
+                } catch (error) {
+                    errorBox.hidden = false;
+                    errorBox.textContent = 'No se pudo abrir la camara. Revisa los permisos o usa "Elegir de galeria".';
+                }
+            });
+
+            closeButton.addEventListener('click', closeCamera);
+
+            captureButton.addEventListener('click', () => {
+                if (! stream) {
+                    return;
+                }
+
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                canvas.toBlob((blob) => {
+                    if (! blob) {
+                        return;
+                    }
+
+                    const file = new File([blob], `foto-${Date.now()}.jpg`, { type: 'image/jpeg' });
+                    addCapturedFile(file);
+                    closeCamera();
+                }, 'image/jpeg', 0.9);
             });
         })();
 

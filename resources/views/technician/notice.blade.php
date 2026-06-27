@@ -62,7 +62,7 @@
         </div>
 
         <div class="action-grid">
-            <a class="button" href="{{ $notice->installation->wazeUrl() }}" target="_blank" rel="noreferrer">🧭 Abrir Waze</a>
+            <x-nav-buttons :installation="$notice->installation" label="Abrir Waze" />
             @if ($phone)
                 <a class="button secondary" href="tel:{{ $phone }}">📞 Llamar</a>
             @else

@@ -9,6 +9,20 @@ if ('serviceWorker' in navigator) {
     });
 }
 
+window.openGoogleMaps = function (appUrl, androidUrl, webUrl) {
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    const target = isAndroid ? androidUrl : appUrl;
+
+    const fallbackTimer = setTimeout(() => {
+        window.location.href = webUrl;
+    }, 1200);
+
+    window.addEventListener('pagehide', () => clearTimeout(fallbackTimer), { once: true });
+    window.addEventListener('blur', () => clearTimeout(fallbackTimer), { once: true });
+
+    window.location.href = target;
+};
+
 document.querySelectorAll('[data-draft-key]').forEach((field) => {
     const key = `marpel-draft:${field.dataset.draftKey}`;
     const stored = localStorage.getItem(key);

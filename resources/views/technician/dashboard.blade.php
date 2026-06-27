@@ -66,7 +66,7 @@
                 </div>
             </div>
             <div class="action-grid">
-                <a class="button" href="{{ $nextWorkOrder->installation->wazeUrl() }}" target="_blank" rel="noreferrer">🧭 Abrir Waze</a>
+                <x-nav-buttons :installation="$nextWorkOrder->installation" label="Abrir Waze" />
                 @if ($focusPhone)
                     <a class="button secondary" href="tel:{{ $focusPhone }}">📞 Llamar</a>
                 @else
@@ -105,7 +105,7 @@
                 </div>
             </div>
             <div class="action-grid">
-                <a class="button" href="{{ $nextNotice->installation->wazeUrl() }}" target="_blank" rel="noreferrer">🧭 Abrir Waze</a>
+                <x-nav-buttons :installation="$nextNotice->installation" label="Abrir Waze" />
                 @if ($focusPhone)
                     <a class="button secondary" href="tel:{{ $focusPhone }}">📞 Llamar</a>
                 @else
@@ -135,7 +135,7 @@
             <p class="job-meta">{{ $nextReview->equipment->code }} {{ $nextReview->equipment->name }}</p>
             <p class="problem-text">{{ $nextReview->notes ?: 'Revision programada.' }}</p>
             <div class="action-grid">
-                <a class="button" href="{{ $nextReview->installation->wazeUrl() }}" target="_blank" rel="noreferrer">🧭 Abrir Waze</a>
+                <x-nav-buttons :installation="$nextReview->installation" label="Abrir Waze" />
                 @if ($focusPhone)
                     <a class="button secondary" href="tel:{{ $focusPhone }}">📞 Llamar</a>
                 @else
@@ -170,7 +170,7 @@
             <p class="problem-text">{{ $notice->description }}</p>
             <div class="action-grid">
                 <a class="button secondary" href="{{ route('technician.notices.show', $notice) }}">📄 Ver aviso</a>
-                <a class="button" href="{{ $notice->installation->wazeUrl() }}" target="_blank" rel="noreferrer">🧭 Waze</a>
+                <x-nav-buttons :installation="$notice->installation" />
             </div>
             @if ($noticePhone)
                 <div class="primary-action-grid">
@@ -202,7 +202,7 @@
             <h3>{{ $review->installation->name }}</h3>
             <p class="job-meta">{{ $review->equipment->code }} {{ $review->equipment->name }}</p>
             <div class="action-grid">
-                <a class="button secondary" href="{{ $review->installation->wazeUrl() }}" target="_blank" rel="noreferrer">🧭 Waze</a>
+                <x-nav-buttons :installation="$review->installation" />
                 @if ($review->workOrder)
                     <a class="button success full" href="{{ route('technician.work-orders.show', $review->workOrder) }}">🛠 Abrir parte</a>
                 @else
