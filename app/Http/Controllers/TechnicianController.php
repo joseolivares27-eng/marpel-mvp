@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Customer;
+use App\Models\Equipment;
+use App\Models\Installation;
 use App\Models\Material;
 use App\Models\Notice;
 use App\Models\Review;
@@ -55,6 +58,79 @@ class TechnicianController extends Controller
             ->get();
 
         return view('technician.notices', compact('notices'));
+    }
+
+    public function createNotice(): View
+    {
+        return view('technician.notice-create', $this->cascadeOptions());
+    }
+
+    public function storeNotice(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'customer_id' => ['required', 'integer', 'exists:customers,id'],
+            'installation_id' => ['required', 'integer', 'exists:installations,id'],
+            'equipment_id' => ['nullable', 'integer', 'exists:equipment,id'],
+            'priority' => ['required', 'string', 'in:low,normal,urgent'],
+            'description' => ['required', 'string'],
+            'contact_name' => ['nullable', 'string', 'max:255'],
+            'contact_phone' => ['nullable', 'string', 'max:50'],
+        ]);
+
+        $notice = Notice::create([
+            ...$validated,
+            'channel' => 'technician',
+            'assigned_user_id' => $request->user()->id,
+            'reported_by' => $request->user()->name,
+            'scheduled_at' => now(),
+        ]);
+
+        $workOrder = $notice->refresh()->workOrder;
+
+        if ($workOrder) {
+            return redirect()->route('technician.work-orders.show', $workOrder)->with('status', 'Aviso creado.');
+        }
+
+        return redirect()->route('technician.notices.show', $notice)->with('status', 'Aviso creado.');
+    }
+
+    public function createReview(): View
+    {
+        return view('technician.review-create', $this->cascadeOptions());
+    }
+
+    public function storeReview(Request $request, WorkOrderService $service): RedirectResponse
+    {
+        $validated = $request->validate([
+            'customer_id' => ['required', 'integer', 'exists:customers,id'],
+            'installation_id' => ['required', 'integer', 'exists:installations,id'],
+            'equipment_id' => ['required', 'integer', 'exists:equipment,id'],
+            'type' => ['required', 'string', 'in:preventive,corrective'],
+            'notes' => ['nullable', 'string'],
+        ]);
+
+        $review = Review::create([
+            ...$validated,
+            'assigned_user_id' => $request->user()->id,
+            'scheduled_at' => now(),
+            'status' => 'assigned',
+        ]);
+
+        $workOrder = $service->startFromReview($review, $request->user());
+
+        return redirect()->route('technician.work-orders.show', $workOrder)->with('status', 'Revision creada.');
+    }
+
+    /**
+     * @return array{customers: \Illuminate\Support\Collection, installationsJson: string, equipmentJson: string}
+     */
+    private function cascadeOptions(): array
+    {
+        return [
+            'customers' => Customer::orderBy('legal_name')->get(['id', 'legal_name']),
+            'installationsJson' => Installation::orderBy('name')->get(['id', 'name', 'customer_id'])->toJson(),
+            'equipmentJson' => Equipment::orderBy('name')->get(['id', 'name', 'installation_id'])->toJson(),
+        ];
     }
 
     public function closedWorkOrders(Request $request): View

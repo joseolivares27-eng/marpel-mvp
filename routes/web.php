@@ -15,8 +15,12 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/tecnico', [TechnicianController::class, 'dashboard'])->name('technician.dashboard');
     Route::get('/tecnico/avisos', [TechnicianController::class, 'notices'])->name('technician.notices.index');
+    Route::get('/tecnico/avisos/nuevo', [TechnicianController::class, 'createNotice'])->name('technician.notices.create');
+    Route::post('/tecnico/avisos/nuevo', [TechnicianController::class, 'storeNotice'])->name('technician.notices.store');
     Route::get('/tecnico/avisos/{notice}', [TechnicianController::class, 'showNotice'])->name('technician.notices.show');
     Route::post('/tecnico/avisos/{notice}/iniciar', [TechnicianController::class, 'startNotice'])->name('technician.notices.start');
+    Route::get('/tecnico/revisiones/nueva', [TechnicianController::class, 'createReview'])->name('technician.reviews.create');
+    Route::post('/tecnico/revisiones/nueva', [TechnicianController::class, 'storeReview'])->name('technician.reviews.store');
     Route::post('/tecnico/revisiones/{review}/iniciar', [TechnicianController::class, 'startReview'])->name('technician.reviews.start');
     Route::get('/tecnico/partes-cerrados', [TechnicianController::class, 'closedWorkOrders'])->name('technician.work-orders.closed');
     Route::get('/tecnico/partes/{workOrder}', [TechnicianController::class, 'showWorkOrder'])->name('technician.work-orders.show');

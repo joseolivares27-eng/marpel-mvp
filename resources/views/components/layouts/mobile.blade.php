@@ -41,6 +41,22 @@
             </div>
             @auth
                 <div class="topbar-actions">
+                    <details class="quick-create-menu">
+                        <summary aria-label="Crear nuevo">
+                            <span class="quick-create-icon">+</span>
+                        </summary>
+                        <div class="quick-create-panel">
+                            <a href="{{ route('technician.notices.create') }}">
+                                <span>＋ Nuevo aviso</span>
+                                <small>Reportar una incidencia en una instalacion.</small>
+                            </a>
+                            <a href="{{ route('technician.reviews.create') }}">
+                                <span>＋ Nueva revision</span>
+                                <small>Programar una revision de un equipo.</small>
+                            </a>
+                        </div>
+                    </details>
+
                     <details class="notification-menu">
                         <summary aria-label="Notificaciones">
                             <span class="notification-icon">!</span>

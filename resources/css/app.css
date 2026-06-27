@@ -239,6 +239,71 @@ button {
     text-align: center;
 }
 
+.quick-create-menu {
+    position: relative;
+}
+
+.quick-create-menu summary {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    min-height: 44px;
+    border: 1px solid #dbe5f5;
+    border-radius: 10px;
+    background: var(--marpel-blue);
+    list-style: none;
+    box-shadow: 0 10px 22px rgba(15, 98, 254, 0.22);
+}
+
+.quick-create-menu summary::-webkit-details-marker {
+    display: none;
+}
+
+.quick-create-icon {
+    color: white;
+    font-size: 24px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.quick-create-panel {
+    position: absolute;
+    top: 54px;
+    left: 0;
+    z-index: 60;
+    width: min(280px, calc(100vw - 24px));
+    overflow: hidden;
+    border: 1px solid var(--marpel-line);
+    border-radius: 14px;
+    background: white;
+    box-shadow: 0 20px 48px rgba(23, 32, 51, 0.24);
+}
+
+.quick-create-panel a {
+    display: block;
+    padding: 13px 16px;
+    border-bottom: 1px solid #f1f4f8;
+    color: var(--marpel-ink);
+    text-decoration: none;
+}
+
+.quick-create-panel a:last-child {
+    border-bottom: 0;
+}
+
+.quick-create-panel a span {
+    display: block;
+    font-size: 14px;
+    font-weight: 900;
+}
+
+.quick-create-panel a small {
+    display: block;
+    margin-top: 3px;
+    color: var(--marpel-muted);
+    font-size: 12px;
+}
+
 .flash-card,
 .job-card,
 .metric,
