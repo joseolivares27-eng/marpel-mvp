@@ -18,8 +18,8 @@
     <meta name="apple-mobile-web-app-title" content="Marpel">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <link rel="manifest" href="/manifest.webmanifest">
-    <link rel="apple-touch-icon" href="/icons/marpel.svg">
-    <link rel="icon" href="/icons/marpel.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icons/marpel-180.png">
+    <link rel="icon" href="/icons/marpel-32.png" type="image/png">
     <title>{{ $title }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -33,7 +33,7 @@
     <main class="mobile-shell">
         <header class="topbar">
             <div class="topbar-brand">
-                <div class="brand-mark">M</div>
+                <img class="brand-mark" src="/icons/marpel-192.png" alt="Marpel">
                 <div>
                     <p class="screen-title">{{ $heading }}</p>
                     <p class="screen-subtitle">{{ $subheading }}</p>
