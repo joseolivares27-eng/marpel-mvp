@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\NotionSyncService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Throwable;
 
@@ -13,6 +14,8 @@ class NotionApiController extends Controller
 {
     public function clientes(Request $request, NotionSyncService $service): JsonResponse
     {
+        Log::info('NOTION_WEBHOOK_RAW_CLIENTES', ['body' => $request->all(), 'raw' => $request->getContent()]);
+
         if (! $this->tokenIsValid($request)) {
             return $this->unauthorized();
         }
@@ -53,6 +56,8 @@ class NotionApiController extends Controller
 
     public function avisos(Request $request, NotionSyncService $service): JsonResponse
     {
+        Log::info('NOTION_WEBHOOK_RAW_AVISOS', ['body' => $request->all(), 'raw' => $request->getContent()]);
+
         if (! $this->tokenIsValid($request)) {
             return $this->unauthorized();
         }
@@ -94,6 +99,8 @@ class NotionApiController extends Controller
 
     public function contratos(Request $request, NotionSyncService $service): JsonResponse
     {
+        Log::info('NOTION_WEBHOOK_RAW_CONTRATOS', ['body' => $request->all(), 'raw' => $request->getContent()]);
+
         if (! $this->tokenIsValid($request)) {
             return $this->unauthorized();
         }
