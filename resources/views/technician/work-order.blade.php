@@ -76,7 +76,7 @@
         </div>
 
         <div class="action-grid">
-            <x-nav-buttons :installation="$workOrder->installation" label="Abrir Waze" />
+            <x-nav-buttons :installation="$workOrder->installation" />
             @if ($phone)
                 <a class="button secondary" href="tel:{{ $phone }}">📞 Llamar</a>
             @else
@@ -156,9 +156,15 @@
 
         <section class="form-card">
             <h2>Fotos</h2>
-            <div class="action-grid">
-                <button type="button" class="button" id="open-camera-button">📷 Hacer foto</button>
-                <label class="button secondary photo-picker-label" for="photos">🖼️ Elegir de galeria</label>
+            <div class="photo-action-grid">
+                <button type="button" class="photo-action" id="open-camera-button">
+                    <span class="photo-action-icon">📷</span>
+                    <span>Hacer foto</span>
+                </button>
+                <label class="photo-action" for="photos">
+                    <span class="photo-action-icon">🖼️</span>
+                    <span>Elegir de galeria</span>
+                </label>
             </div>
             <p class="camera-standalone-hint" id="camera-standalone-hint" hidden>
                 La camara no funciona dentro de la app instalada (limitacion de iOS). Haz la foto con la Camara del iPhone y luego pulsa "Elegir de galeria" para adjuntarla.
@@ -188,35 +194,43 @@
 
         <section class="form-card">
             <h2>Firma del cliente</h2>
-            @if ($hasSignature)
-                <p class="problem-text">
-                    Firma guardada
-                    @if ($workOrder->customer_name)
-                        por {{ $workOrder->customer_name }}
-                    @endif
-                    @if ($workOrder->signed_at)
-                        el {{ $workOrder->signed_at->format('d/m/Y H:i') }}
-                    @endif
-                </p>
-            @else
-                <p class="job-meta">Necesaria si el resultado es Solucionado.</p>
-            @endif
 
             <div class="field">
                 <label for="customer_name">Nombre firmante</label>
                 <input id="customer_name" class="input" name="customer_name" value="{{ old('customer_name', $workOrder->customer_name) }}" placeholder="Nombre y apellidos">
             </div>
 
-            <div class="field signature-panel">
+            <div class="field" id="saved-signature-block" {{ $hasSignature ? '' : 'hidden' }}>
+                <label>Firma guardada</label>
+                <div class="saved-signature">
+                    @if ($hasSignature)
+                        <img src="{{ \Illuminate\Support\Facades\Storage::url($workOrder->customer_signature_path) }}" alt="Firma guardada">
+                    @endif
+                </div>
+                <p class="job-meta">
+                    @if ($workOrder->customer_name)
+                        Firmado por {{ $workOrder->customer_name }}
+                    @endif
+                    @if ($workOrder->signed_at)
+                        el {{ $workOrder->signed_at->format('d/m/Y H:i') }}
+                    @endif
+                </p>
+                <button id="replace-signature" class="button secondary" type="button">✏️ Sustituir firma</button>
+            </div>
+
+            <div class="field signature-panel" id="signature-draw-block" {{ $hasSignature ? 'hidden' : '' }}>
                 <label for="signature-pad">Firma tactil</label>
                 <div class="signature-wrap">
                     <canvas id="signature-pad" class="signature-pad"></canvas>
-                    <div id="signature-placeholder" class="signature-placeholder">{{ $hasSignature ? 'Firmar de nuevo si hace falta' : 'Firma aqui' }}</div>
+                    <div id="signature-placeholder" class="signature-placeholder">Firma aqui</div>
                 </div>
                 <input id="signature_data" type="hidden" name="signature_data">
+                @if (! $hasSignature)
+                    <p class="job-meta">Necesaria si el resultado es Solucionado.</p>
+                @endif
             </div>
 
-            <div class="action-grid">
+            <div class="action-grid" id="signature-draw-actions" {{ $hasSignature ? 'hidden' : '' }}>
                 <button id="clear-signature" class="button secondary" type="button">Limpiar firma</button>
                 <span class="button secondary">Fecha automatica</span>
             </div>
@@ -402,6 +416,10 @@
             const input = document.getElementById('signature_data');
             const clearButton = document.getElementById('clear-signature');
             const placeholder = document.getElementById('signature-placeholder');
+            const replaceButton = document.getElementById('replace-signature');
+            const savedBlock = document.getElementById('saved-signature-block');
+            const drawBlock = document.getElementById('signature-draw-block');
+            const drawActions = document.getElementById('signature-draw-actions');
 
             if (! canvas || ! input) {
                 return;
@@ -492,6 +510,17 @@
                 if (placeholder) {
                     placeholder.hidden = false;
                 }
+            });
+
+            replaceButton?.addEventListener('click', () => {
+                if (! window.confirm('Ya hay una firma guardada. ¿Quieres sustituirla?')) {
+                    return;
+                }
+
+                savedBlock.hidden = true;
+                drawBlock.hidden = false;
+                drawActions.hidden = false;
+                configureCanvas();
             });
         })();
     </script>

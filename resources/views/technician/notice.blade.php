@@ -62,7 +62,7 @@
         </div>
 
         <div class="action-grid">
-            <x-nav-buttons :installation="$notice->installation" label="Abrir Waze" />
+            <x-nav-buttons :installation="$notice->installation" />
             @if ($phone)
                 <a class="button secondary" href="tel:{{ $phone }}">📞 Llamar</a>
             @else

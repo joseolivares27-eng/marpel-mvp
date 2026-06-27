@@ -66,7 +66,7 @@
                 </div>
             </div>
             <div class="action-grid">
-                <x-nav-buttons :installation="$nextWorkOrder->installation" label="Abrir Waze" />
+                <x-nav-buttons :installation="$nextWorkOrder->installation" />
                 @if ($focusPhone)
                     <a class="button secondary" href="tel:{{ $focusPhone }}">📞 Llamar</a>
                 @else
@@ -105,7 +105,7 @@
                 </div>
             </div>
             <div class="action-grid">
-                <x-nav-buttons :installation="$nextNotice->installation" label="Abrir Waze" />
+                <x-nav-buttons :installation="$nextNotice->installation" />
                 @if ($focusPhone)
                     <a class="button secondary" href="tel:{{ $focusPhone }}">📞 Llamar</a>
                 @else
@@ -135,7 +135,7 @@
             <p class="job-meta">{{ $nextReview->equipment->code }} {{ $nextReview->equipment->name }}</p>
             <p class="problem-text">{{ $nextReview->notes ?: 'Revision programada.' }}</p>
             <div class="action-grid">
-                <x-nav-buttons :installation="$nextReview->installation" label="Abrir Waze" />
+                <x-nav-buttons :installation="$nextReview->installation" />
                 @if ($focusPhone)
                     <a class="button secondary" href="tel:{{ $focusPhone }}">📞 Llamar</a>
                 @else
