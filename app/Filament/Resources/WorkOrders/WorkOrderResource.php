@@ -21,10 +21,12 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -77,9 +79,31 @@ class WorkOrderResource extends Resource
                 ->persistTab()
                 ->id('work-order-origin-tabs')
                 ->columnSpanFull(),
-            Select::make('customer_id')->label('Cliente')->relationship('customer', 'legal_name')->searchable()->preload()->required(),
-            Select::make('installation_id')->label('Instalacion')->relationship('installation', 'name')->searchable()->preload()->required(),
-            Select::make('equipment_id')->label('Equipo')->relationship('equipment', 'name')->searchable()->preload(),
+            Select::make('customer_id')
+                ->label('Cliente')
+                ->relationship('customer', 'legal_name')
+                ->searchable()
+                ->preload()
+                ->live()
+                ->afterStateUpdated(fn (Set $set) => $set('installation_id', null) && $set('equipment_id', null))
+                ->required(),
+            Select::make('installation_id')
+                ->label('Instalacion')
+                ->relationship('installation', 'name', fn (Builder $query, Get $get) => $query->when($get('customer_id'), fn (Builder $query, $customerId) => $query->where('customer_id', $customerId)))
+                ->searchable()
+                ->preload()
+                ->live()
+                ->disabled(fn (Get $get): bool => blank($get('customer_id')))
+                ->helperText(fn (Get $get): ?string => blank($get('customer_id')) ? 'Elige primero un cliente.' : null)
+                ->afterStateUpdated(fn (Set $set) => $set('equipment_id', null))
+                ->required(),
+            Select::make('equipment_id')
+                ->label('Equipo')
+                ->relationship('equipment', 'name', fn (Builder $query, Get $get) => $query->when($get('installation_id'), fn (Builder $query, $installationId) => $query->where('installation_id', $installationId)))
+                ->searchable()
+                ->preload()
+                ->disabled(fn (Get $get): bool => blank($get('installation_id')))
+                ->helperText(fn (Get $get): ?string => blank($get('installation_id')) ? 'Elige primero una instalacion.' : null),
             Select::make('assigned_user_id')->label('Tecnico')->relationship('technician', 'name')->searchable()->preload(),
             Textarea::make('observations')
                 ->label('Descripcion / trabajo solicitado')

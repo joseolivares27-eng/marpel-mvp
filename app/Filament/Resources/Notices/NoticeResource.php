@@ -17,9 +17,12 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class NoticeResource extends Resource
 {
@@ -38,9 +41,31 @@ class NoticeResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            Select::make('customer_id')->label('Cliente')->relationship('customer', 'legal_name')->searchable()->preload()->required(),
-            Select::make('installation_id')->label('Instalacion')->relationship('installation', 'name')->searchable()->preload()->required(),
-            Select::make('equipment_id')->label('Equipo')->relationship('equipment', 'name')->searchable()->preload(),
+            Select::make('customer_id')
+                ->label('Cliente')
+                ->relationship('customer', 'legal_name')
+                ->searchable()
+                ->preload()
+                ->live()
+                ->afterStateUpdated(fn (Set $set) => $set('installation_id', null) && $set('equipment_id', null))
+                ->required(),
+            Select::make('installation_id')
+                ->label('Instalacion')
+                ->relationship('installation', 'name', fn (Builder $query, Get $get) => $query->when($get('customer_id'), fn (Builder $query, $customerId) => $query->where('customer_id', $customerId)))
+                ->searchable()
+                ->preload()
+                ->live()
+                ->disabled(fn (Get $get): bool => blank($get('customer_id')))
+                ->helperText(fn (Get $get): ?string => blank($get('customer_id')) ? 'Elige primero un cliente.' : null)
+                ->afterStateUpdated(fn (Set $set) => $set('equipment_id', null))
+                ->required(),
+            Select::make('equipment_id')
+                ->label('Equipo')
+                ->relationship('equipment', 'name', fn (Builder $query, Get $get) => $query->when($get('installation_id'), fn (Builder $query, $installationId) => $query->where('installation_id', $installationId)))
+                ->searchable()
+                ->preload()
+                ->disabled(fn (Get $get): bool => blank($get('installation_id')))
+                ->helperText(fn (Get $get): ?string => blank($get('installation_id')) ? 'Elige primero una instalacion.' : null),
             TextInput::make('reported_by')
                 ->label('Avisado por')
                 ->helperText('Persona que comunica la incidencia. Ej. vecino, presidente, administrador.'),
