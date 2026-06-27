@@ -327,10 +327,9 @@
                 return;
             }
 
-            const isStandalone = window.navigator.standalone === true
-                || window.matchMedia('(display-mode: standalone)').matches;
+            const isIosStandalone = window.navigator.standalone === true;
 
-            if (isStandalone) {
+            if (isIosStandalone) {
                 openCameraButton.hidden = true;
                 document.getElementById('camera-standalone-hint').hidden = false;
                 return;
