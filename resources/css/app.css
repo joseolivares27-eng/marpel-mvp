@@ -473,13 +473,19 @@ button {
 .action-grid,
 .primary-action-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
     margin-top: 16px;
 }
 
 .primary-action-grid {
     grid-template-columns: 1fr;
+}
+
+.action-grid .button,
+.action-grid form,
+.action-grid form .button {
+    width: 100%;
 }
 
 .button {
@@ -600,6 +606,7 @@ button {
 }
 
 .material-card {
+    position: relative;
     margin-top: 12px;
     padding: 14px;
     border: 1px solid #e2e8f2;
@@ -609,6 +616,108 @@ button {
 
 .material-card .field:first-child {
     margin-top: 0;
+}
+
+.material-card-remove {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid #e2e8f2;
+    border-radius: 9px;
+    background: white;
+    color: var(--marpel-danger);
+    font-size: 15px;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.materials-empty-hint {
+    margin-top: 12px;
+    padding: 14px;
+    color: var(--marpel-muted);
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.add-row-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 50px;
+    margin-top: 12px;
+    border: 1.5px dashed #9db3da;
+    border-radius: 12px;
+    background: #f3f7ff;
+    color: var(--marpel-blue-dark);
+    font-size: 14px;
+    font-weight: 900;
+}
+
+.collapsible-section > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    list-style: none;
+    cursor: pointer;
+}
+
+.collapsible-section > summary::-webkit-details-marker {
+    display: none;
+}
+
+.collapsible-section > summary::after {
+    flex: 0 0 auto;
+    color: var(--marpel-blue);
+    font-size: 13px;
+    font-weight: 900;
+    content: "Ver";
+}
+
+.collapsible-section[open] > summary::after {
+    content: "Ocultar";
+}
+
+.photo-picker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 96px;
+    border: 1.5px dashed #9db3da;
+    border-radius: 13px;
+    background: #f3f7ff;
+    color: var(--marpel-blue-dark);
+    font-size: 14px;
+    font-weight: 900;
+    text-align: center;
+}
+
+.photo-picker .photo-picker-icon {
+    font-size: 24px;
+}
+
+.photo-picker input[type="file"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0;
+}
+
+.photo-picker-count {
+    margin: 0;
+    color: var(--marpel-muted);
+    font-size: 12px;
+    font-weight: 700;
 }
 
 .photo-grid {

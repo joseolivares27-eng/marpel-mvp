@@ -35,13 +35,9 @@
                 'description' => $line->description,
                 'quantity' => $line->quantity,
             ]);
-
-        while ($materialRows->count() < 3) {
-            $materialRows->push(['material_id' => null, 'description' => '', 'quantity' => '']);
-        }
     @endphp
 
-    <a class="back-link" href="{{ route('technician.dashboard') }}#partes">Partes</a>
+    <a class="back-link" href="{{ route('technician.dashboard') }}#partes">&larr; Partes</a>
 
     <section class="route-hero {{ $workOrder->notice?->priority === 'urgent' ? 'urgent' : '' }}">
         <div class="badge-row">
@@ -80,9 +76,9 @@
         </div>
 
         <div class="action-grid">
-            <a class="button" href="{{ $workOrder->installation->mapsUrl() }}" target="_blank" rel="noreferrer">Abrir Maps</a>
+            <a class="button" href="{{ $workOrder->installation->mapsUrl() }}" target="_blank" rel="noreferrer">📍 Abrir Maps</a>
             @if ($phone)
-                <a class="button secondary" href="tel:{{ $phone }}">Llamar</a>
+                <a class="button secondary" href="tel:{{ $phone }}">📞 Llamar</a>
             @else
                 <span class="button secondary">Sin telefono</span>
             @endif
@@ -90,7 +86,7 @@
 
         @if ($workOrder->status === 'closed')
             <div class="action-grid">
-                <a class="button full" href="{{ route('work-orders.pdf.download', $workOrder) }}">Descargar PDF</a>
+                <a class="button full" href="{{ route('work-orders.pdf.download', $workOrder) }}">⬇ Descargar PDF</a>
             </div>
         @endif
     </section>
@@ -125,35 +121,47 @@
             </div>
         </section>
 
-        <h2 class="section-title">Materiales <small>Opcional</small></h2>
-        @foreach ($materialRows as $i => $materialRow)
-            <section class="material-card">
-                <div class="field">
-                    <label for="material_{{ $i }}">Material catalogo</label>
-                    <select id="material_{{ $i }}" name="materials[{{ $i }}][material_id]" class="select">
-                        <option value="">Material manual / sin catalogo</option>
-                        @foreach ($materials as $material)
-                            <option value="{{ $material->id }}" @selected((string) ($materialRow['material_id'] ?? '') === (string) $material->id)>{{ $material->name }} · stock {{ $material->stock_quantity }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="field">
-                    <label>Descripcion manual</label>
-                    <input class="input" name="materials[{{ $i }}][description]" value="{{ $materialRow['description'] ?? '' }}" placeholder="Ej. Fotocelula, mando, cable">
-                </div>
-                <div class="field">
-                    <label>Cantidad</label>
-                    <input class="input" name="materials[{{ $i }}][quantity]" type="number" min="0" step="0.01" value="{{ $materialRow['quantity'] ?? ($i === 0 ? '1' : '') }}">
-                </div>
-            </section>
-        @endforeach
+        <details class="form-card collapsible-section" id="materials-section" {{ $materialRows->isNotEmpty() ? 'open' : '' }}>
+            <summary><h2>Materiales <small>Opcional</small></h2></summary>
+
+            <div id="material-rows">
+                @forelse ($materialRows as $i => $materialRow)
+                    <section class="material-card" data-material-row>
+                        <button class="material-card-remove" type="button" data-remove-row aria-label="Quitar material">&times;</button>
+                        <div class="field">
+                            <label for="material_{{ $i }}">Material catalogo</label>
+                            <select id="material_{{ $i }}" name="materials[{{ $i }}][material_id]" class="select">
+                                <option value="">Material manual / sin catalogo</option>
+                                @foreach ($materials as $material)
+                                    <option value="{{ $material->id }}" @selected((string) ($materialRow['material_id'] ?? '') === (string) $material->id)>{{ $material->name }} · stock {{ $material->stock_quantity }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label>Descripcion manual</label>
+                            <input class="input" name="materials[{{ $i }}][description]" value="{{ $materialRow['description'] ?? '' }}" placeholder="Ej. Fotocelula, mando, cable">
+                        </div>
+                        <div class="field">
+                            <label>Cantidad</label>
+                            <input class="input" name="materials[{{ $i }}][quantity]" type="number" min="0" step="0.01" value="{{ $materialRow['quantity'] ?? '1' }}">
+                        </div>
+                    </section>
+                @empty
+                    <p class="materials-empty-hint" data-materials-empty-hint>Sin materiales anadidos todavia.</p>
+                @endforelse
+            </div>
+
+            <button type="button" class="add-row-button" id="add-material-row">+ Anadir material</button>
+        </details>
 
         <section class="form-card">
             <h2>Fotos</h2>
-            <div class="field">
-                <label for="photos">Fotografias</label>
-                <input id="photos" class="input" name="photos[]" type="file" accept="image/*" capture="environment" multiple>
-            </div>
+            <label class="photo-picker" for="photos">
+                <span class="photo-picker-icon">📷</span>
+                <span>Hacer foto o elegir de galeria</span>
+                <input id="photos" name="photos[]" type="file" accept="image/*" capture="environment" multiple>
+            </label>
+            <p class="photo-picker-count" id="photo-picker-count"></p>
         </section>
 
         @if ($workOrder->photos->isNotEmpty())
@@ -213,6 +221,88 @@
     </form>
 
     <script>
+        (() => {
+            const rowsWrap = document.getElementById('material-rows');
+            const addButton = document.getElementById('add-material-row');
+            const materialOptions = @json($materials->map(fn ($material) => ['id' => $material->id, 'label' => $material->name.' · stock '.$material->stock_quantity]));
+
+            if (! rowsWrap || ! addButton) {
+                return;
+            }
+
+            let rowIndex = {{ $materialRows->count() }};
+
+            const buildRow = () => {
+                const i = rowIndex++;
+                const optionsHtml = materialOptions
+                    .map((m) => `<option value="${m.id}">${m.label}</option>`)
+                    .join('');
+
+                const row = document.createElement('section');
+                row.className = 'material-card';
+                row.setAttribute('data-material-row', '');
+                row.innerHTML = `
+                    <button class="material-card-remove" type="button" data-remove-row aria-label="Quitar material">&times;</button>
+                    <div class="field">
+                        <label>Material catalogo</label>
+                        <select name="materials[${i}][material_id]" class="select">
+                            <option value="">Material manual / sin catalogo</option>
+                            ${optionsHtml}
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Descripcion manual</label>
+                        <input class="input" name="materials[${i}][description]" placeholder="Ej. Fotocelula, mando, cable">
+                    </div>
+                    <div class="field">
+                        <label>Cantidad</label>
+                        <input class="input" name="materials[${i}][quantity]" type="number" min="0" step="0.01" value="1">
+                    </div>
+                `;
+
+                return row;
+            };
+
+            const hint = rowsWrap.querySelector('[data-materials-empty-hint]');
+
+            addButton.addEventListener('click', () => {
+                hint?.remove();
+                rowsWrap.appendChild(buildRow());
+            });
+
+            rowsWrap.addEventListener('click', (event) => {
+                const trigger = event.target.closest('[data-remove-row]');
+
+                if (! trigger) {
+                    return;
+                }
+
+                trigger.closest('[data-material-row]')?.remove();
+
+                if (! rowsWrap.querySelector('[data-material-row]')) {
+                    const empty = document.createElement('p');
+                    empty.className = 'materials-empty-hint';
+                    empty.setAttribute('data-materials-empty-hint', '');
+                    empty.textContent = 'Sin materiales anadidos todavia.';
+                    rowsWrap.appendChild(empty);
+                }
+            });
+        })();
+
+        (() => {
+            const photoInput = document.getElementById('photos');
+            const counter = document.getElementById('photo-picker-count');
+
+            if (! photoInput || ! counter) {
+                return;
+            }
+
+            photoInput.addEventListener('change', () => {
+                const count = photoInput.files?.length ?? 0;
+                counter.textContent = count > 0 ? `${count} foto${count > 1 ? 's' : ''} seleccionada${count > 1 ? 's' : ''}` : '';
+            });
+        })();
+
         (() => {
             const canvas = document.getElementById('signature-pad');
             const input = document.getElementById('signature_data');

@@ -28,7 +28,7 @@
         ];
     @endphp
 
-    <a class="back-link" href="{{ route('technician.notices.index') }}">Avisos</a>
+    <a class="back-link" href="{{ route('technician.notices.index') }}">&larr; Avisos</a>
 
     <section class="route-hero {{ $notice->priority === 'urgent' ? 'urgent' : '' }}">
         <div class="badge-row">
@@ -62,19 +62,19 @@
         </div>
 
         <div class="action-grid">
-            <a class="button" href="{{ $notice->installation->mapsUrl() }}" target="_blank" rel="noreferrer">Abrir Maps</a>
-            <a class="button secondary" href="{{ $notice->installation->wazeUrl() }}" target="_blank" rel="noreferrer">Waze</a>
+            <a class="button" href="{{ $notice->installation->mapsUrl() }}" target="_blank" rel="noreferrer">📍 Abrir Maps</a>
+            <a class="button secondary" href="{{ $notice->installation->wazeUrl() }}" target="_blank" rel="noreferrer">🧭 Waze</a>
             @if ($phone)
-                <a class="button secondary" href="tel:{{ $phone }}">Llamar</a>
+                <a class="button secondary" href="tel:{{ $phone }}">📞 Llamar</a>
             @else
                 <span class="button secondary">Sin telefono</span>
             @endif
             @if ($notice->workOrder)
-                <a class="button success full" href="{{ route('technician.work-orders.show', $notice->workOrder) }}">Abrir parte</a>
+                <a class="button success full" href="{{ route('technician.work-orders.show', $notice->workOrder) }}">🛠 Abrir parte</a>
             @else
                 <form method="post" action="{{ route('technician.notices.start', $notice) }}">
                     @csrf
-                    <button class="button success full" type="submit">Iniciar parte</button>
+                    <button class="button success full" type="submit">🛠 Iniciar parte</button>
                 </form>
             @endif
         </div>

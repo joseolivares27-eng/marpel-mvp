@@ -11,7 +11,7 @@
         ];
     @endphp
 
-    <a class="back-link" href="{{ route('technician.dashboard') }}">Ruta de hoy</a>
+    <a class="back-link" href="{{ route('technician.dashboard') }}">&larr; Ruta de hoy</a>
 
     <div class="metric-grid">
         <div class="metric">
@@ -65,19 +65,19 @@
             </div>
 
             <div class="action-grid">
-                <a class="button secondary" href="{{ route('technician.notices.show', $notice) }}">Ver aviso</a>
-                <a class="button" href="{{ $notice->installation->mapsUrl() }}" target="_blank" rel="noreferrer">Maps</a>
+                <a class="button secondary" href="{{ route('technician.notices.show', $notice) }}">📄 Ver aviso</a>
+                <a class="button" href="{{ $notice->installation->mapsUrl() }}" target="_blank" rel="noreferrer">📍 Maps</a>
                 @if ($phone)
-                    <a class="button secondary" href="tel:{{ $phone }}">Llamar</a>
+                    <a class="button secondary" href="tel:{{ $phone }}">📞 Llamar</a>
                 @else
                     <span class="button secondary">Sin telefono</span>
                 @endif
                 @if ($notice->workOrder)
-                    <a class="button success full" href="{{ route('technician.work-orders.show', $notice->workOrder) }}">Abrir parte</a>
+                    <a class="button success full" href="{{ route('technician.work-orders.show', $notice->workOrder) }}">🛠 Abrir parte</a>
                 @else
                     <form method="post" action="{{ route('technician.notices.start', $notice) }}">
                         @csrf
-                        <button class="button success full" type="submit">Iniciar parte</button>
+                        <button class="button success full" type="submit">🛠 Iniciar parte</button>
                     </form>
                 @endif
             </div>

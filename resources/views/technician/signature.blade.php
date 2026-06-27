@@ -1,5 +1,5 @@
 <x-layouts.mobile heading="Firma cliente" :subheading="$workOrder->installation->name">
-    <a class="back-link" href="{{ route('technician.work-orders.show', $workOrder) }}">Parte #{{ $workOrder->id }}</a>
+    <a class="back-link" href="{{ route('technician.work-orders.show', $workOrder) }}">&larr; Parte #{{ $workOrder->id }}</a>
 
     <section class="route-hero">
         <div class="badge-row">
