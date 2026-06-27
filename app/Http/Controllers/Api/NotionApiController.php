@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Services\NotionSyncService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Throwable;
 
@@ -14,13 +13,27 @@ class NotionApiController extends Controller
 {
     public function clientes(Request $request, NotionSyncService $service): JsonResponse
     {
-        Log::info('NOTION_WEBHOOK_RAW_CLIENTES', ['body' => $request->all(), 'raw' => $request->getContent()]);
-
         if (! $this->tokenIsValid($request)) {
             return $this->unauthorized();
         }
 
-        $validator = Validator::make($request->all(), [
+        $payload = $this->parseNotionPayload($request->all(), [
+            'Nombre' => 'nombre',
+            'CIF' => 'cif',
+            'Email' => 'email',
+            'Teléfono' => 'telefono',
+            'Persona de contacto' => 'persona_contacto',
+            'Dirección' => 'direccion',
+            'Localidad' => 'localidad',
+            'Provincia' => 'provincia',
+            'Código Postal' => 'codigo_postal',
+            'Notas' => 'notas',
+            'Observaciones' => 'observaciones',
+            'Estado' => 'estado',
+            'Carpeta Drive' => 'carpeta_drive',
+        ]);
+
+        $validator = Validator::make($payload, [
             'notion_page_id' => ['nullable', 'string', 'max:255'],
             'nombre' => ['nullable', 'string', 'max:255'],
             'cif' => ['nullable', 'string', 'max:50'],
@@ -56,13 +69,26 @@ class NotionApiController extends Controller
 
     public function avisos(Request $request, NotionSyncService $service): JsonResponse
     {
-        Log::info('NOTION_WEBHOOK_RAW_AVISOS', ['body' => $request->all(), 'raw' => $request->getContent()]);
-
         if (! $this->tokenIsValid($request)) {
             return $this->unauthorized();
         }
 
-        $validator = Validator::make($request->all(), [
+        $payload = $this->parseNotionPayload($request->all(), [
+            'Cliente' => 'cliente',
+            'Comunidad / Empresa' => 'comunidad_empresa',
+            'Dirección' => 'direccion',
+            'Teléfono' => 'telefono',
+            'Email' => 'email',
+            'Tipo de instalación' => 'tipo_instalacion',
+            'Prioridad' => 'prioridad',
+            'Descripción de la avería' => 'descripcion_averia',
+            'Observaciones' => 'observaciones',
+            'Creado por:' => 'creado_por',
+            'Fecha de aviso' => 'fecha_aviso',
+            'Fecha programada' => 'fecha_programada',
+        ]);
+
+        $validator = Validator::make($payload, [
             'notion_page_id' => ['nullable', 'string', 'max:255'],
             'cliente' => ['nullable', 'string', 'max:255'],
             'comunidad_empresa' => ['nullable', 'string', 'max:255'],
@@ -99,13 +125,30 @@ class NotionApiController extends Controller
 
     public function contratos(Request $request, NotionSyncService $service): JsonResponse
     {
-        Log::info('NOTION_WEBHOOK_RAW_CONTRATOS', ['body' => $request->all(), 'raw' => $request->getContent()]);
-
         if (! $this->tokenIsValid($request)) {
             return $this->unauthorized();
         }
 
-        $validator = Validator::make($request->all(), [
+        $payload = $this->parseNotionPayload($request->all(), [
+            'Nombre' => 'nombre',
+            'CIF' => 'cif',
+            'Email' => 'email',
+            'Teléfono' => 'telefono',
+            'Dirección' => 'direccion',
+            'Localidad' => 'localidad',
+            'Provincia' => 'provincia',
+            'Código Postal' => 'codigo_postal',
+            'Fecha inicio' => 'fecha_inicio',
+            'Nº contrato' => 'numero_contrato',
+            'Nº equipos' => 'numero_equipos',
+            'Descripción equipos' => 'descripcion_equipos',
+            'Observaciones' => 'observaciones',
+            'Importe mensual' => 'importe_mensual',
+            'Estado' => 'estado',
+            'Carpeta Drive' => 'carpeta_drive',
+        ]);
+
+        $validator = Validator::make($payload, [
             'notion_page_id' => ['nullable', 'string', 'max:255'],
             'nombre' => ['nullable', 'string', 'max:255'],
             'cif' => ['nullable', 'string', 'max:50'],
@@ -141,6 +184,67 @@ class NotionApiController extends Controller
             'cliente_id' => $contract->customer_id,
             'mensaje' => 'Contrato sincronizado correctamente desde Notion.',
         ], 201);
+    }
+
+    /**
+     * Accepts either a flat payload (custom webhook body) or Notion's native
+     * automation event payload (full page object under data.properties) and
+     * always returns a flat array using our own field names.
+     *
+     * @param array<string, mixed> $body
+     * @param array<string, string> $propertyMap Notion property name => our field name
+     * @return array<string, mixed>
+     */
+    private function parseNotionPayload(array $body, array $propertyMap): array
+    {
+        $properties = $body['data']['properties'] ?? null;
+
+        if (! is_array($properties)) {
+            return $body;
+        }
+
+        $payload = [
+            'notion_page_id' => $body['data']['id'] ?? null,
+        ];
+
+        foreach ($propertyMap as $notionName => $ourKey) {
+            if (isset($properties[$notionName])) {
+                $payload[$ourKey] = $this->extractPropertyValue($properties[$notionName]);
+            }
+        }
+
+        return $payload;
+    }
+
+    /**
+     * @param array<string, mixed> $property
+     */
+    private function extractPropertyValue(array $property): mixed
+    {
+        return match ($property['type'] ?? null) {
+            'title' => $this->joinRichText($property['title'] ?? []),
+            'rich_text' => $this->joinRichText($property['rich_text'] ?? []),
+            'email' => $property['email'] ?? null,
+            'phone_number' => $property['phone_number'] ?? null,
+            'url' => $property['url'] ?? null,
+            'select' => $property['select']['name'] ?? null,
+            'status' => $property['status']['name'] ?? null,
+            'number' => $property['number'] ?? null,
+            'checkbox' => $property['checkbox'] ?? null,
+            'date' => $property['date']['start'] ?? null,
+            'people' => collect($property['people'] ?? [])->pluck('name')->filter()->implode(', ') ?: null,
+            default => null,
+        };
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $richText
+     */
+    private function joinRichText(array $richText): ?string
+    {
+        $text = collect($richText)->pluck('plain_text')->filter()->implode('');
+
+        return $text === '' ? null : $text;
     }
 
     private function tokenIsValid(Request $request): bool
