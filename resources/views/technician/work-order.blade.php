@@ -86,7 +86,11 @@
 
         @if ($workOrder->status === 'closed')
             <div class="action-grid">
-                <a class="button full" href="{{ route('work-orders.pdf.download', $workOrder) }}" target="_blank" rel="noreferrer">⬇ Ver / Enviar PDF</a>
+                <button
+                    type="button"
+                    class="button full"
+                    onclick="shareOrOpenPdf('{{ route('work-orders.pdf.download', $workOrder) }}', 'parte-{{ $workOrder->id }}.pdf', 'Parte {{ $workOrder->folio_label }}')"
+                >⬇ Ver / Enviar PDF</button>
             </div>
         @endif
     </section>
