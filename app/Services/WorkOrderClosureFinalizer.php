@@ -25,7 +25,7 @@ class WorkOrderClosureFinalizer
             if ($workOrder->notice) {
                 $workOrder->notice->update([
                     'status' => $this->noticeStatusForResult($workOrder->result),
-                    'closed_at' => $workOrder->result === 'unresolved' ? null : now(),
+                    'closed_at' => now(),
                     'requires_quote' => false,
                 ]);
             }
@@ -49,6 +49,7 @@ class WorkOrderClosureFinalizer
         return match ($result) {
             'solved' => 'resolved',
             'cancelled' => 'cancelled',
+            'unresolved' => 'completed',
             default => 'pending',
         };
     }
