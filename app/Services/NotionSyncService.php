@@ -24,8 +24,18 @@ class NotionSyncService
                 'tax_id' => $payload['cif'] ?? null,
                 'email' => $payload['email'] ?? null,
                 'phone' => $payload['telefono'] ?? null,
+                'phone2' => $payload['telefono2'] ?? null,
+                'iban' => $payload['iban'] ?? null,
                 'primary_contact_name' => $payload['persona_contacto'] ?? null,
-                'fiscal_address' => $this->joinAddress($payload),
+                'fiscal_address' => $payload['direccion'] ?? null,
+                'city' => $payload['localidad'] ?? null,
+                'province' => $payload['provincia'] ?? null,
+                'postal_code' => $payload['codigo_postal'] ?? null,
+                'client_type' => $this->mapClientType($payload['tipo'] ?? null),
+                'contract_start_date' => $payload['fecha_inicio'] ?? null,
+                'monthly_amount' => $payload['importe_mensual'] ?? null,
+                'equipment_count' => $payload['numero_equipos'] ?? null,
+                'equipment_description' => $payload['descripcion_equipos'] ?? null,
                 'notes' => $payload['notas'] ?? $payload['observaciones'] ?? null,
                 'status' => $this->mapCustomerStatus($payload['estado'] ?? null),
                 'notion_page_id' => $payload['notion_page_id'] ?? null,
@@ -118,13 +128,25 @@ class NotionSyncService
                 'tax_id' => $payload['cif'] ?? null,
                 'email' => $payload['email'] ?? null,
                 'phone' => $payload['telefono'] ?? null,
-                'fiscal_address' => $this->joinAddress($payload),
+                'fiscal_address' => $payload['direccion'] ?? null,
+                'city' => $payload['localidad'] ?? null,
+                'province' => $payload['provincia'] ?? null,
+                'postal_code' => $payload['codigo_postal'] ?? null,
                 'status' => 'active',
                 'notes' => 'Cliente creado automaticamente desde el contrato de Notion.',
             ]);
 
-            if (filled($payload['carpeta_drive'] ?? null)) {
-                $customer->update(['drive_folder_url' => $payload['carpeta_drive']]);
+            $customerUpdates = array_filter([
+                'drive_folder_url' => $payload['carpeta_drive'] ?? null,
+                'iban' => $payload['iban'] ?? null,
+                'contract_start_date' => $payload['fecha_inicio'] ?? null,
+                'monthly_amount' => $payload['importe_mensual'] ?? null,
+                'equipment_count' => $payload['numero_equipos'] ?? null,
+                'equipment_description' => $payload['descripcion_equipos'] ?? null,
+            ], fn ($value) => filled($value));
+
+            if ($customerUpdates !== []) {
+                $customer->update($customerUpdates);
             }
 
             $existing = filled($payload['notion_page_id'] ?? null)
@@ -207,21 +229,6 @@ class NotionSyncService
     /**
      * @param array<string, mixed> $payload
      */
-    private function joinAddress(array $payload): ?string
-    {
-        $parts = array_filter([
-            $payload['direccion'] ?? null,
-            $payload['localidad'] ?? null,
-            $payload['provincia'] ?? null,
-            $payload['codigo_postal'] ?? null,
-        ]);
-
-        return $parts === [] ? null : implode(', ', $parts);
-    }
-
-    /**
-     * @param array<string, mixed> $payload
-     */
     private function noticeDescription(array $payload): string
     {
         $lines = array_filter([
@@ -241,6 +248,16 @@ class NotionSyncService
         return match ($estado) {
             'Finalizado' => 'inactive',
             default => 'active',
+        };
+    }
+
+    private function mapClientType(?string $tipo): ?string
+    {
+        return match ($tipo) {
+            'Mantenimiento' => 'maintenance',
+            'Reparaciones' => 'repairs',
+            'Mantenimiento + Reparaciones' => 'maintenance_repairs',
+            default => null,
         };
     }
 

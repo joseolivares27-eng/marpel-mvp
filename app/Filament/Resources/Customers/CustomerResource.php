@@ -7,6 +7,7 @@ use App\Models\Customer;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -38,11 +39,25 @@ class CustomerResource extends Resource
             TextInput::make('tax_id')->label('CIF/NIF')->maxLength(50),
             TextInput::make('email')->email()->maxLength(255),
             TextInput::make('phone')->label('Telefono')->tel()->maxLength(50),
+            TextInput::make('phone2')->label('Telefono 2')->tel()->maxLength(50),
             TextInput::make('primary_contact_name')->label('Contacto principal')->maxLength(255),
+            TextInput::make('iban')->label('IBAN')->maxLength(50),
             TextInput::make('fiscal_address')
-                ->label('Direccion fiscal')
+                ->label('Direccion')
                 ->helperText('Direccion fiscal/administrativa del cliente.')
                 ->columnSpanFull(),
+            TextInput::make('city')->label('Localidad'),
+            TextInput::make('province')->label('Provincia'),
+            TextInput::make('postal_code')->label('Codigo postal'),
+            Select::make('client_type')->label('Tipo')->options([
+                'maintenance' => 'Mantenimiento',
+                'repairs' => 'Reparaciones',
+                'maintenance_repairs' => 'Mantenimiento + Reparaciones',
+            ]),
+            DatePicker::make('contract_start_date')->label('Fecha inicio contrato'),
+            TextInput::make('monthly_amount')->label('Importe mensual')->numeric()->prefix('EUR'),
+            TextInput::make('equipment_count')->label('Nº equipos')->numeric(),
+            Textarea::make('equipment_description')->label('Descripcion equipos')->columnSpanFull(),
             Select::make('status')->label('Estado')->options([
                 'active' => 'Activo',
                 'inactive' => 'Inactivo',
