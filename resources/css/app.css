@@ -302,7 +302,6 @@ button {
 
 .route-hero {
     position: relative;
-    overflow: hidden;
     margin-top: 12px;
     padding: 18px;
     border: 1px solid #cfdaf0;
@@ -317,6 +316,7 @@ button {
     right: 0;
     left: 0;
     height: 5px;
+    border-radius: 16px 16px 0 0;
     background: linear-gradient(90deg, var(--marpel-blue), var(--marpel-yellow));
     content: "";
 }

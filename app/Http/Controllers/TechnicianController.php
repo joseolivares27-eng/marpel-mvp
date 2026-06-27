@@ -22,6 +22,7 @@ class TechnicianController extends Controller
         $notices = Notice::with(['customer', 'installation', 'equipment', 'workOrder'])
             ->where('assigned_user_id', $user->id)
             ->whereNotIn('status', ['completed', 'resolved', 'cancelled'])
+            ->whereDoesntHave('workOrder')
             ->orderByRaw("case when priority = 'urgent' then 0 else 1 end")
             ->orderBy('scheduled_at')
             ->get();
@@ -29,6 +30,7 @@ class TechnicianController extends Controller
         $reviews = Review::with(['customer', 'installation', 'equipment', 'workOrder'])
             ->where('assigned_user_id', $user->id)
             ->whereIn('status', ['scheduled', 'assigned', 'in_progress'])
+            ->whereDoesntHave('workOrder')
             ->orderBy('scheduled_at')
             ->get();
 
