@@ -34,7 +34,7 @@
             <p class="job-meta">Cerrado el {{ $workOrder->finished_at?->format('d/m/Y H:i') ?? '-' }}</p>
             <div class="action-grid">
                 <a class="button secondary" href="{{ route('technician.work-orders.show', $workOrder) }}">📄 Ver parte</a>
-                <a class="button" href="{{ route('work-orders.pdf.download', $workOrder) }}">⬇ Descargar PDF</a>
+                <a class="button" href="{{ route('work-orders.pdf.download', $workOrder) }}" target="_blank" rel="noreferrer">⬇ Ver / Enviar PDF</a>
             </div>
         </article>
     @empty

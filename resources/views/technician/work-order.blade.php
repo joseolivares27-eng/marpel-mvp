@@ -86,7 +86,7 @@
 
         @if ($workOrder->status === 'closed')
             <div class="action-grid">
-                <a class="button full" href="{{ route('work-orders.pdf.download', $workOrder) }}">⬇ Descargar PDF</a>
+                <a class="button full" href="{{ route('work-orders.pdf.download', $workOrder) }}" target="_blank" rel="noreferrer">⬇ Ver / Enviar PDF</a>
             </div>
         @endif
     </section>

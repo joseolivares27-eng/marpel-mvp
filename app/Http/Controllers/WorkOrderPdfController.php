@@ -29,7 +29,7 @@ class WorkOrderPdfController extends Controller
 
         abort_if(! $disk->exists($path), 404, 'No se encontro el PDF del parte.');
 
-        return $disk->download($path, "parte-{$workOrder->id}.pdf", [
+        return $disk->response($path, "parte-{$workOrder->id}.pdf", [
             'Content-Type' => 'application/pdf',
         ]);
     }
