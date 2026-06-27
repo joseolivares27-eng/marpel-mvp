@@ -30,6 +30,8 @@ class Contract extends Model
         'includes_emergency_service',
         'includes_preventive_maintenance',
         'notes',
+        'notion_page_id',
+        'drive_folder_url',
     ];
 
     protected function casts(): array

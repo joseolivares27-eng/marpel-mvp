@@ -47,6 +47,11 @@ class CustomerResource extends Resource
                 'active' => 'Activo',
                 'inactive' => 'Inactivo',
             ])->default('active')->required(),
+            TextInput::make('drive_folder_url')
+                ->label('Carpeta Drive')
+                ->helperText('Se rellena solo al sincronizar el contrato desde Notion, o puedes pegarla a mano.')
+                ->url()
+                ->columnSpanFull(),
             Textarea::make('notes')->label('Notas')->columnSpanFull(),
 
             Repeater::make('installations')
@@ -111,6 +116,11 @@ class CustomerResource extends Resource
                 TextColumn::make('phone')->label('Telefono')->searchable(),
                 TextColumn::make('email')->searchable(),
                 TextColumn::make('installations_count')->label('Instalaciones')->counts('installations'),
+                TextColumn::make('drive_folder_url')
+                    ->label('Carpeta Drive')
+                    ->formatStateUsing(fn (?string $state): string => $state ? 'Abrir' : '-')
+                    ->url(fn (Customer $record): ?string => $record->drive_folder_url)
+                    ->openUrlInNewTab(),
                 TextColumn::make('status')->label('Estado')->badge()->sortable(),
                 TextColumn::make('created_at')->label('Alta')->date()->sortable(),
             ])

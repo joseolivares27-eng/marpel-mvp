@@ -20,6 +20,8 @@ class Customer extends Model
         'primary_contact_name',
         'notes',
         'status',
+        'notion_page_id',
+        'drive_folder_url',
     ];
 
     public function installations(): HasMany
