@@ -83,7 +83,7 @@ class NotionSyncService
 
                 $installation = Installation::create([
                     'customer_id' => $customer->id,
-                    'name' => $payload['comunidad_empresa'] ?: Str::limit('Ubicacion '.$address, 255, ''),
+                    'name' => ($payload['comunidad_empresa'] ?? null) ?: Str::limit('Ubicacion '.$address, 255, ''),
                     'address' => $address !== '' ? $address : 'Sin direccion indicada',
                     'contact_phone' => $payload['telefono'] ?? null,
                     'contact_email' => $payload['email'] ?? null,
