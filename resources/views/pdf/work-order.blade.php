@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>Parte de trabajo #{{ $workOrder->id }}</title>
+<title>Parte de trabajo {{ $workOrder->folio_label }}</title>
 <style>
     @page {
         margin: 90px 36px 70px 36px;
@@ -285,7 +285,7 @@
                 </td>
                 <td class="doc-cell">
                     <p class="doc-title">Parte de trabajo</p>
-                    <p class="doc-number">Nº {{ str_pad((string) $workOrder->id, 6, '0', STR_PAD_LEFT) }}</p>
+                    <p class="doc-number">Nº {{ $workOrder->folio_label }}</p>
                 </td>
             </tr>
         </table>
@@ -295,7 +295,7 @@
         <table>
             <tr>
                 <td>Automatismos Marpel &middot; automatismosmarpel.com</td>
-                <td class="footer-right">Generado el {{ $generatedAt }} &middot; Parte #{{ $workOrder->id }}</td>
+                <td class="footer-right">Generado el {{ $generatedAt }} &middot; Parte {{ $workOrder->folio_label }}</td>
             </tr>
         </table>
     </div>

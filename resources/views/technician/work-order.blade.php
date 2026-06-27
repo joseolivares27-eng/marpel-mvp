@@ -1,4 +1,4 @@
-<x-layouts.mobile :heading="'Parte #'.$workOrder->id" :subheading="$workOrder->installation->name">
+<x-layouts.mobile :heading="'Parte '.$workOrder->folio_label" :subheading="$workOrder->installation->name">
     @php
         $resultLabels = [
             'pending' => 'pending',
@@ -76,7 +76,7 @@
         </div>
 
         <div class="action-grid">
-            <a class="button" href="{{ $workOrder->installation->mapsUrl() }}" target="_blank" rel="noreferrer">📍 Abrir Maps</a>
+            <a class="button" href="{{ $workOrder->installation->wazeUrl() }}" target="_blank" rel="noreferrer">🧭 Abrir Waze</a>
             @if ($phone)
                 <a class="button secondary" href="tel:{{ $phone }}">📞 Llamar</a>
             @else
@@ -159,7 +159,7 @@
             <label class="photo-picker" for="photos">
                 <span class="photo-picker-icon">📷</span>
                 <span>Hacer foto o elegir de galeria</span>
-                <input id="photos" name="photos[]" type="file" accept="image/*" capture="environment" multiple>
+                <input id="photos" name="photos[]" type="file" accept="image/*" multiple>
             </label>
             <p class="photo-picker-count" id="photo-picker-count"></p>
         </section>

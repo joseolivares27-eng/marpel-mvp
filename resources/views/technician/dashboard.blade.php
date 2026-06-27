@@ -41,7 +41,7 @@
             </div>
             <p class="card-kicker">Siguiente trabajo</p>
             <h2>{{ $nextWorkOrder->installation->name }}</h2>
-            <p class="job-meta">Parte #{{ $nextWorkOrder->id }} · {{ $nextWorkOrder->equipment?->code }} {{ $nextWorkOrder->equipment?->name ?? 'Sin equipo concreto' }}</p>
+            <p class="job-meta">Parte {{ $nextWorkOrder->folio_label }} · {{ $nextWorkOrder->equipment?->code }} {{ $nextWorkOrder->equipment?->name ?? 'Sin equipo concreto' }}</p>
             <p class="problem-text">
                 @if ($nextWorkOrder->notice)
                     {{ $nextWorkOrder->notice->description }}
@@ -66,7 +66,7 @@
                 </div>
             </div>
             <div class="action-grid">
-                <a class="button" href="{{ $nextWorkOrder->installation->mapsUrl() }}" target="_blank" rel="noreferrer">📍 Abrir Maps</a>
+                <a class="button" href="{{ $nextWorkOrder->installation->wazeUrl() }}" target="_blank" rel="noreferrer">🧭 Abrir Waze</a>
                 @if ($focusPhone)
                     <a class="button secondary" href="tel:{{ $focusPhone }}">📞 Llamar</a>
                 @else
@@ -105,7 +105,7 @@
                 </div>
             </div>
             <div class="action-grid">
-                <a class="button" href="{{ $nextNotice->installation->mapsUrl() }}" target="_blank" rel="noreferrer">📍 Abrir Maps</a>
+                <a class="button" href="{{ $nextNotice->installation->wazeUrl() }}" target="_blank" rel="noreferrer">🧭 Abrir Waze</a>
                 @if ($focusPhone)
                     <a class="button secondary" href="tel:{{ $focusPhone }}">📞 Llamar</a>
                 @else
@@ -135,7 +135,7 @@
             <p class="job-meta">{{ $nextReview->equipment->code }} {{ $nextReview->equipment->name }}</p>
             <p class="problem-text">{{ $nextReview->notes ?: 'Revision programada.' }}</p>
             <div class="action-grid">
-                <a class="button" href="{{ $nextReview->installation->mapsUrl() }}" target="_blank" rel="noreferrer">📍 Abrir Maps</a>
+                <a class="button" href="{{ $nextReview->installation->wazeUrl() }}" target="_blank" rel="noreferrer">🧭 Abrir Waze</a>
                 @if ($focusPhone)
                     <a class="button secondary" href="tel:{{ $focusPhone }}">📞 Llamar</a>
                 @else
@@ -170,7 +170,7 @@
             <p class="problem-text">{{ $notice->description }}</p>
             <div class="action-grid">
                 <a class="button secondary" href="{{ route('technician.notices.show', $notice) }}">📄 Ver aviso</a>
-                <a class="button" href="{{ $notice->installation->mapsUrl() }}" target="_blank" rel="noreferrer">📍 Maps</a>
+                <a class="button" href="{{ $notice->installation->wazeUrl() }}" target="_blank" rel="noreferrer">🧭 Waze</a>
             </div>
             @if ($noticePhone)
                 <div class="primary-action-grid">
@@ -202,7 +202,7 @@
             <h3>{{ $review->installation->name }}</h3>
             <p class="job-meta">{{ $review->equipment->code }} {{ $review->equipment->name }}</p>
             <div class="action-grid">
-                <a class="button secondary" href="{{ $review->installation->mapsUrl() }}" target="_blank" rel="noreferrer">📍 Maps</a>
+                <a class="button secondary" href="{{ $review->installation->wazeUrl() }}" target="_blank" rel="noreferrer">🧭 Waze</a>
                 @if ($review->workOrder)
                     <a class="button success full" href="{{ route('technician.work-orders.show', $review->workOrder) }}">🛠 Abrir parte</a>
                 @else
@@ -222,7 +222,7 @@
         <article class="job-card">
             <div class="badge-row">
                 <span class="badge {{ in_array($workOrder->status, ['new', 'open'], true) ? 'danger' : 'success' }}">{{ $statusLabels[$workOrder->status] ?? $workOrder->status }}</span>
-                <span class="badge neutral">Parte #{{ $workOrder->id }}</span>
+                <span class="badge neutral">Parte {{ $workOrder->folio_label }}</span>
             </div>
             <h3>{{ $workOrder->installation->name }}</h3>
             <p class="job-meta">{{ $workOrder->equipment?->code }} {{ $workOrder->equipment?->name ?? 'Sin equipo concreto' }}</p>

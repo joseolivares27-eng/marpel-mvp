@@ -37,9 +37,9 @@ class ClosedWorkOrderResource extends WorkOrderResource
     {
         return $table
             ->columns([
-                TextColumn::make('id')
+                TextColumn::make('folio_label')
                     ->label('N parte')
-                    ->sortable(),
+                    ->sortable(['folio_number']),
                 TextColumn::make('started_at')
                     ->label('Fecha inicio')
                     ->dateTime('d/m/Y H:i')

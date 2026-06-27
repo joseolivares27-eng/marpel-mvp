@@ -81,7 +81,7 @@
         <div class="space-y-4 text-sm">
             @forelse ($record->workOrders->sortByDesc('created_at') as $workOrder)
                 <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
-                    <div><strong>Parte #{{ $workOrder->id }}</strong> · {{ $workOrderStatusLabels[$workOrder->status] ?? $workOrder->status }} · {{ $workOrderResultLabels[$workOrder->result] ?? 'Pendiente' }} · {{ $workOrder->finished_at?->format('d/m/Y H:i') ?? 'Abierto' }}</div>
+                    <div><strong>Parte {{ $workOrder->folio_label }}</strong> · {{ $workOrderStatusLabels[$workOrder->status] ?? $workOrder->status }} · {{ $workOrderResultLabels[$workOrder->result] ?? 'Pendiente' }} · {{ $workOrder->finished_at?->format('d/m/Y H:i') ?? 'Abierto' }}</div>
                     <p>{{ $workOrder->work_performed ?: $workOrder->observations }}</p>
                     @if ($workOrder->materials->isNotEmpty())
                         <div class="mt-2">

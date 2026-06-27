@@ -66,7 +66,7 @@
 
             <div class="action-grid">
                 <a class="button secondary" href="{{ route('technician.notices.show', $notice) }}">📄 Ver aviso</a>
-                <a class="button" href="{{ $notice->installation->mapsUrl() }}" target="_blank" rel="noreferrer">📍 Maps</a>
+                <a class="button" href="{{ $notice->installation->wazeUrl() }}" target="_blank" rel="noreferrer">🧭 Waze</a>
                 @if ($phone)
                     <a class="button secondary" href="tel:{{ $phone }}">📞 Llamar</a>
                 @else

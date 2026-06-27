@@ -14,6 +14,13 @@ class WorkOrder extends Model
 
     protected static function booted(): void
     {
+        static::creating(function (WorkOrder $workOrder): void {
+            if (! $workOrder->folio_number) {
+                $maxFolio = static::max('folio_number');
+                $workOrder->folio_number = $maxFolio ? $maxFolio + 1 : 432;
+            }
+        });
+
         static::saving(function (WorkOrder $workOrder): void {
             app(\App\Services\OperationalContextValidator::class)->validate($workOrder);
 
@@ -55,6 +62,7 @@ class WorkOrder extends Model
     }
 
     protected $fillable = [
+        'folio_number',
         'customer_id',
         'installation_id',
         'equipment_id',
@@ -131,6 +139,13 @@ class WorkOrder extends Model
     public function invoiceLines(): HasMany
     {
         return $this->hasMany(InvoiceLine::class);
+    }
+
+    public function getFolioLabelAttribute(): string
+    {
+        $year = $this->created_at?->year ?? now()->year;
+
+        return "{$year}/{$this->folio_number}";
     }
 
     public function getOriginLabelAttribute(): string

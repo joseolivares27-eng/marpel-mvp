@@ -206,7 +206,7 @@ class WorkOrderResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('id')->label('Parte')->sortable(),
+                TextColumn::make('folio_label')->label('Parte')->sortable(['folio_number']),
                 TextColumn::make('origin_label')->label('Origen')->badge(),
                 TextColumn::make('status')->label('Estado')->badge()->formatStateUsing(fn (?string $state): string => self::statusLabel($state))->sortable(),
                 TextColumn::make('result')->label('Resultado')->badge()->formatStateUsing(fn (?string $state): string => self::resultLabel($state))->sortable(),

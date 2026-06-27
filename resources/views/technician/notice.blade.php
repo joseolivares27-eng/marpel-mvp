@@ -62,8 +62,7 @@
         </div>
 
         <div class="action-grid">
-            <a class="button" href="{{ $notice->installation->mapsUrl() }}" target="_blank" rel="noreferrer">📍 Abrir Maps</a>
-            <a class="button secondary" href="{{ $notice->installation->wazeUrl() }}" target="_blank" rel="noreferrer">🧭 Waze</a>
+            <a class="button" href="{{ $notice->installation->wazeUrl() }}" target="_blank" rel="noreferrer">🧭 Abrir Waze</a>
             @if ($phone)
                 <a class="button secondary" href="tel:{{ $phone }}">📞 Llamar</a>
             @else
