@@ -18,6 +18,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/tecnico/avisos/{notice}', [TechnicianController::class, 'showNotice'])->name('technician.notices.show');
     Route::post('/tecnico/avisos/{notice}/iniciar', [TechnicianController::class, 'startNotice'])->name('technician.notices.start');
     Route::post('/tecnico/revisiones/{review}/iniciar', [TechnicianController::class, 'startReview'])->name('technician.reviews.start');
+    Route::get('/tecnico/partes-cerrados', [TechnicianController::class, 'closedWorkOrders'])->name('technician.work-orders.closed');
     Route::get('/tecnico/partes/{workOrder}', [TechnicianController::class, 'showWorkOrder'])->name('technician.work-orders.show');
     Route::post('/tecnico/partes/{workOrder}', [TechnicianController::class, 'updateWorkOrder'])->name('technician.work-orders.update');
     Route::get('/tecnico/partes/{workOrder}/firma', [TechnicianController::class, 'signature'])->name('technician.work-orders.signature');

@@ -94,7 +94,8 @@
         <nav class="bottom-nav" aria-label="Navegacion tecnico">
             <a class="{{ request()->routeIs('technician.dashboard') ? 'active' : '' }}" href="{{ route('technician.dashboard') }}">Hoy</a>
             <a class="{{ request()->routeIs('technician.notices.*') ? 'active' : '' }}" href="{{ route('technician.notices.index') }}">Avisos</a>
-            <a class="{{ request()->routeIs('technician.work-orders.*') ? 'active' : '' }}" href="{{ route('technician.dashboard') }}#partes">Partes</a>
+            <a class="{{ request()->routeIs('technician.work-orders.show', 'technician.work-orders.update', 'technician.work-orders.signature', 'technician.work-orders.signature.store') ? 'active' : '' }}" href="{{ route('technician.dashboard') }}#partes">Partes</a>
+            <a class="{{ request()->routeIs('technician.work-orders.closed') ? 'active' : '' }}" href="{{ route('technician.work-orders.closed') }}">Cerrados</a>
         </nav>
     @endif
 </body>

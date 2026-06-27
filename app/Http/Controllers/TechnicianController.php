@@ -55,6 +55,19 @@ class TechnicianController extends Controller
         return view('technician.notices', compact('notices'));
     }
 
+    public function closedWorkOrders(Request $request): View
+    {
+        $user = $request->user();
+
+        $workOrders = WorkOrder::with(['installation', 'equipment', 'notice', 'review'])
+            ->where('assigned_user_id', $user->id)
+            ->where('status', 'closed')
+            ->latest('finished_at')
+            ->get();
+
+        return view('technician.closed-work-orders', compact('workOrders'));
+    }
+
     public function showNotice(Request $request, Notice $notice): View
     {
         $this->ensureTechnicianCanSee($request, $notice->assigned_user_id);

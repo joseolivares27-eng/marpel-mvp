@@ -689,6 +689,16 @@ button {
     text-align: center;
 }
 
+.camera-standalone-hint {
+    margin: 10px 0 0;
+    padding: 12px 14px;
+    border-radius: 11px;
+    background: var(--marpel-yellow-soft);
+    color: #5b3b00;
+    font-size: 13px;
+    font-weight: 750;
+}
+
 .visually-hidden-file {
     position: absolute;
     width: 1px;
@@ -861,7 +871,7 @@ button {
     left: 0;
     z-index: 40;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 1px;
     padding-bottom: env(safe-area-inset-bottom);
     border-top: 1px solid #e6ebf2;

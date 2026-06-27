@@ -160,11 +160,14 @@
                 <button type="button" class="button" id="open-camera-button">📷 Hacer foto</button>
                 <label class="button secondary photo-picker-label" for="photos">🖼️ Elegir de galeria</label>
             </div>
+            <p class="camera-standalone-hint" id="camera-standalone-hint" hidden>
+                La camara no funciona dentro de la app instalada (limitacion de iOS). Haz la foto con la Camara del iPhone y luego pulsa "Elegir de galeria" para adjuntarla.
+            </p>
             <input id="photos" name="photos[]" type="file" accept="image/*" multiple class="visually-hidden-file">
             <p class="photo-picker-count" id="photo-picker-count"></p>
 
             <div class="camera-overlay" id="camera-overlay" hidden>
-                <video id="camera-video" autoplay playsinline muted></video>
+                <video id="camera-video" autoplay playsinline webkit-playsinline muted></video>
                 <canvas id="camera-canvas" hidden></canvas>
                 <p class="camera-error" id="camera-error" hidden></p>
                 <div class="camera-controls">
@@ -220,13 +223,11 @@
         </section>
 
         <div class="action-grid">
-            <button class="button secondary" name="action" value="save" type="submit">Guardar cambios</button>
+            <button class="button secondary" name="action" value="save" type="submit">Guardar firma</button>
         </div>
 
         <div class="sticky-action-row">
-            <button class="button success full" name="action" value="close" type="submit">
-                {{ $hasSignature ? 'Cerrar parte' : 'Guardar firma y cerrar parte' }}
-            </button>
+            <button class="button success full" name="action" value="close" type="submit">Guardar y cerrar</button>
         </div>
     </form>
 
@@ -326,6 +327,15 @@
                 return;
             }
 
+            const isStandalone = window.navigator.standalone === true
+                || window.matchMedia('(display-mode: standalone)').matches;
+
+            if (isStandalone) {
+                openCameraButton.hidden = true;
+                document.getElementById('camera-standalone-hint').hidden = false;
+                return;
+            }
+
             let stream = null;
 
             const stopStream = () => {
@@ -358,6 +368,7 @@
                         audio: false,
                     });
                     video.srcObject = stream;
+                    await video.play().catch(() => {});
                 } catch (error) {
                     errorBox.hidden = false;
                     errorBox.textContent = 'No se pudo abrir la camara. Revisa los permisos o usa "Elegir de galeria".';
