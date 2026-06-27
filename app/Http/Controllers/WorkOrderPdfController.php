@@ -19,7 +19,7 @@ class WorkOrderPdfController extends Controller
         $disk = Storage::disk('public');
         $path = $workOrder->pdf_path;
 
-        if ($path && $disk->exists($path) && $this->pdfNeedsSignatureRefresh($workOrder, $path)) {
+        if ($path && $disk->exists($path) && $this->pdfIsStale($workOrder, $path)) {
             $path = null;
         }
 
@@ -34,23 +34,18 @@ class WorkOrderPdfController extends Controller
         ]);
     }
 
-    private function pdfNeedsSignatureRefresh(WorkOrder $workOrder, string $pdfPath): bool
+    private function pdfIsStale(WorkOrder $workOrder, string $pdfPath): bool
     {
-        if (! $workOrder->customer_signature_path) {
-            return false;
-        }
+        $disk = Storage::disk('public');
+        $generatedAt = $disk->lastModified($pdfPath);
 
-        $pdf = Storage::disk('public')->get($pdfPath);
-
-        if (! is_string($pdf)) {
+        if (! $generatedAt) {
             return true;
         }
 
-        if (str_contains($pdf, 'Firma guardada, pero no se pudo incrustar')) {
-            return true;
-        }
+        $updatedAt = $workOrder->signed_at ?? $workOrder->updated_at;
 
-        return ! str_contains($pdf, '/Subtype /Image');
+        return $updatedAt && $updatedAt->getTimestamp() > $generatedAt;
     }
 
     private function ensureCanDownload(Request $request, WorkOrder $workOrder): void

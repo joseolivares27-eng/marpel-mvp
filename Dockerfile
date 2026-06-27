@@ -16,8 +16,11 @@ FROM php:8.4-fpm-alpine AS app
 RUN apk add --no-cache \
     bash \
     curl \
+    freetype-dev \
     icu-dev \
+    libjpeg-turbo-dev \
     libpng-dev \
+    libwebp-dev \
     libzip-dev \
     nginx \
     oniguruma-dev \
@@ -25,7 +28,8 @@ RUN apk add --no-cache \
     supervisor \
     unzip \
     zip \
-    && docker-php-ext-install bcmath exif intl mbstring opcache pcntl pdo_pgsql zip
+    && docker-php-ext-configure gd --with-jpeg --with-freetype --with-webp \
+    && docker-php-ext-install bcmath exif gd intl mbstring opcache pcntl pdo_pgsql zip
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
