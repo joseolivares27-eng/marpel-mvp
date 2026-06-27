@@ -6,6 +6,7 @@ use App\Models\Contract;
 use App\Models\Customer;
 use App\Models\Installation;
 use App\Models\Notice;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -100,6 +101,7 @@ class NotionSyncService
                 'priority' => $this->mapNoticePriority($payload['prioridad'] ?? null),
                 'description' => $this->noticeDescription($payload),
                 'scheduled_at' => $payload['fecha_programada'] ?? $payload['fecha_aviso'] ?? null,
+                'assigned_user_id' => $this->findTechnicianByName($payload['tecnico'] ?? null)?->id,
                 'notion_page_id' => $payload['notion_page_id'] ?? null,
             ];
 
@@ -214,6 +216,20 @@ class NotionSyncService
                 $this->normalizeText($customer->legal_name),
                 $this->normalizeText($customer->trade_name ?? ''),
             ], true));
+    }
+
+    private function findTechnicianByName(?string $name): ?User
+    {
+        if (! filled($name)) {
+            return null;
+        }
+
+        $normalizedName = $this->normalizeText($name);
+
+        return User::query()
+            ->where('role', 'technician')
+            ->get()
+            ->first(fn (User $user): bool => $this->normalizeText($user->name) === $normalizedName);
     }
 
     private function findInstallationByNormalizedAddress(string $address): ?Installation

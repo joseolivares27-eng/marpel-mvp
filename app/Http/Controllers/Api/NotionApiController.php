@@ -97,7 +97,8 @@ class NotionApiController extends Controller
             'Prioridad' => 'prioridad',
             'Descripción de la avería' => 'descripcion_averia',
             'Observaciones' => 'observaciones',
-            'Creado por:' => 'creado_por',
+            'Creado por' => 'creado_por',
+            'Tecnico' => 'tecnico',
             'Fecha de aviso' => 'fecha_aviso',
             'Fecha programada' => 'fecha_programada',
         ]);
@@ -114,6 +115,7 @@ class NotionApiController extends Controller
             'descripcion_averia' => ['nullable', 'string', 'max:5000'],
             'observaciones' => ['nullable', 'string', 'max:5000'],
             'creado_por' => ['nullable', 'string', 'max:255'],
+            'tecnico' => ['nullable', 'string', 'max:255'],
             'fecha_aviso' => ['nullable', 'date'],
             'fecha_programada' => ['nullable', 'date'],
         ]);
