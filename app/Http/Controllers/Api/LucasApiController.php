@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Services\LucasNoticeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Throwable;
 
@@ -14,12 +13,6 @@ class LucasApiController extends Controller
 {
     public function __invoke(Request $request, LucasNoticeService $service): JsonResponse
     {
-        Log::info('Lucas API request recibida', [
-            'content_type' => $request->header('Content-Type'),
-            'body' => $request->all(),
-            'raw' => $request->getContent(),
-        ]);
-
         $expectedToken = env('MARPEL_API_TOKEN');
         $providedToken = (string) $request->header('X-MARPEL-API-TOKEN', '');
 
