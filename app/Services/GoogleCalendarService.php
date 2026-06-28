@@ -65,6 +65,10 @@ class GoogleCalendarService
             ]),
         ]);
 
+        if ($this->isClosed($model)) {
+            $event->setColorId('8');
+        }
+
         if ($model->google_event_id) {
             try {
                 $service->events->update($calendarId, $model->google_event_id, $event);
@@ -134,10 +138,16 @@ class GoogleCalendarService
     protected function buildSummary(Notice|Review $model): string
     {
         $installation = $model->installation?->name ?? 'Sin instalacion';
+        $prefix = $this->isClosed($model) ? '✅ ' : '';
 
         return $model instanceof Notice
-            ? "Aviso: {$installation}"
-            : "Revision: {$installation}";
+            ? "{$prefix}Aviso: {$installation}"
+            : "{$prefix}Revision: {$installation}";
+    }
+
+    protected function isClosed(Notice|Review $model): bool
+    {
+        return in_array($model->status, ['completed', 'resolved', 'cancelled'], true);
     }
 
     protected function buildDescription(Notice|Review $model): string
