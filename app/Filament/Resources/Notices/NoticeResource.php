@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Notices;
 
 use App\Filament\Resources\Notices\Pages\ManageNotices;
+use App\Models\Installation;
 use App\Models\Notice;
 use App\Models\User;
 use App\Services\WorkOrderService;
@@ -41,23 +42,23 @@ class NoticeResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
+            Select::make('installation_id')
+                ->label('Instalacion')
+                ->relationship('installation', 'name')
+                ->getOptionLabelFromRecordUsing(fn ($record): string => $record->name.' - '.($record->customer?->legal_name ?? 'Sin cliente').($record->address ? ' ('.$record->address.')' : ''))
+                ->searchable(['name', 'address'])
+                ->live()
+                ->afterStateUpdated(function (Set $set, $state): void {
+                    $set('equipment_id', null);
+                    $set('customer_id', $state ? Installation::find($state)?->customer_id : null);
+                })
+                ->required(),
             Select::make('customer_id')
                 ->label('Cliente')
                 ->relationship('customer', 'legal_name')
-                ->searchable()
-                ->preload()
-                ->live()
-                ->afterStateUpdated(fn (Set $set) => $set('installation_id', null) && $set('equipment_id', null))
-                ->required(),
-            Select::make('installation_id')
-                ->label('Instalacion')
-                ->relationship('installation', 'name', fn (Builder $query, Get $get) => $query->when($get('customer_id'), fn (Builder $query, $customerId) => $query->where('customer_id', $customerId)))
-                ->searchable()
-                ->preload()
-                ->live()
-                ->disabled(fn (Get $get): bool => blank($get('customer_id')))
-                ->helperText(fn (Get $get): ?string => blank($get('customer_id')) ? 'Elige primero un cliente.' : null)
-                ->afterStateUpdated(fn (Set $set) => $set('equipment_id', null))
+                ->disabled()
+                ->dehydrated()
+                ->helperText('Se rellena solo al elegir la instalacion.')
                 ->required(),
             Select::make('equipment_id')
                 ->label('Equipo')
