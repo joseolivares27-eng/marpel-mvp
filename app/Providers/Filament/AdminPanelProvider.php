@@ -29,8 +29,12 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->brandName('Automatismos Marpel')
+            ->brandLogo(asset('images/marpel-logo.png'))
+            ->brandLogoHeight('2.5rem')
+            ->favicon(asset('icons/marpel-32.png'))
             ->colors([
-                'primary' => Color::Blue,
+                'primary' => Color::hex('#2D6CDF'),
+                'warning' => Color::hex('#F2B705'),
                 'gray' => Color::Slate,
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
