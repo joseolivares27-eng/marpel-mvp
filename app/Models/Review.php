@@ -15,6 +15,14 @@ class Review extends Model
     protected static function booted(): void
     {
         static::saving(fn (Review $review) => app(\App\Services\OperationalContextValidator::class)->validate($review));
+
+        static::saved(function (Review $review): void {
+            app(\App\Services\GoogleCalendarService::class)->pushEvent($review);
+        });
+
+        static::deleting(function (Review $review): void {
+            app(\App\Services\GoogleCalendarService::class)->deleteEvent($review);
+        });
     }
 
     protected $fillable = [
@@ -30,6 +38,7 @@ class Review extends Model
         'result',
         'notes',
         'next_review_at',
+        'google_event_id',
     ];
 
     protected function casts(): array

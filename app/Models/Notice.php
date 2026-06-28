@@ -32,7 +32,13 @@ class Notice extends Model
             app(\App\Services\WorkOrderService::class)->createAutomaticallyFromNotice($notice);
         });
 
+        static::saved(function (Notice $notice): void {
+            app(\App\Services\GoogleCalendarService::class)->pushEvent($notice);
+        });
+
         static::deleting(function (Notice $notice): void {
+            app(\App\Services\GoogleCalendarService::class)->deleteEvent($notice);
+
             $notice->workOrders()
                 ->get()
                 ->each(fn (WorkOrder $workOrder) => WorkOrder::withoutEvents(fn () => $workOrder->delete()));
@@ -56,6 +62,7 @@ class Notice extends Model
         'started_at',
         'closed_at',
         'requires_quote',
+        'google_event_id',
     ];
 
     protected function casts(): array

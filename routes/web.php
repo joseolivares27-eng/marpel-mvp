@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TechnicianController;
 use App\Http\Controllers\WorkOrderPdfController;
+use App\Services\GoogleCalendarService;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => auth()->check() ? redirect()->route('technician.dashboard') : redirect()->route('login'));
@@ -28,4 +29,24 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/tecnico/partes/{workOrder}/firma', [TechnicianController::class, 'signature'])->name('technician.work-orders.signature');
     Route::post('/tecnico/partes/{workOrder}/firma', [TechnicianController::class, 'storeSignature'])->name('technician.work-orders.signature.store');
     Route::get('/partes/{workOrder}/pdf', WorkOrderPdfController::class)->name('work-orders.pdf.download');
+
+    Route::get('/admin/google-calendar/connect', function (GoogleCalendarService $service) {
+        return redirect()->away($service->getAuthUrl());
+    })->name('google-calendar.connect');
+
+    Route::get('/admin/google-calendar/callback', function (GoogleCalendarService $service) {
+        $code = request()->query('code');
+
+        if ($code) {
+            $service->handleAuthCallback($code);
+        }
+
+        return redirect('/admin/google-calendar-settings')->with('status', 'google-calendar-connected');
+    })->name('google-calendar.callback');
+
+    Route::post('/admin/google-calendar/disconnect', function (GoogleCalendarService $service) {
+        $service->disconnect();
+
+        return redirect('/admin/google-calendar-settings');
+    })->name('google-calendar.disconnect');
 });

@@ -4,6 +4,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\Pages\AdminDashboard;
 use App\Filament\Pages\CalendarPage;
+use App\Filament\Pages\GoogleCalendarSettings;
 use App\Filament\Pages\ManagementDashboard;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -42,6 +43,7 @@ class AdminPanelProvider extends PanelProvider
                 AdminDashboard::class,
                 CalendarPage::class,
                 ManagementDashboard::class,
+                GoogleCalendarSettings::class,
             ])
             ->middleware([
                 EncryptCookies::class,
