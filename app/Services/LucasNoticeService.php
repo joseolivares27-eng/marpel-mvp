@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Customer;
 use App\Models\Installation;
 use App\Models\Notice;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -72,6 +73,7 @@ class LucasNoticeService
                 'priority' => $this->normalizePriority($payload['prioridad'] ?? 'normal'),
                 'status' => 'pending',
                 'description' => $this->fullDescription($payload),
+                'assigned_user_id' => $this->defaultTechnicianId(),
             ]);
 
             app(WorkOrderService::class)->createAutomaticallyFromNotice($notice);
@@ -208,6 +210,21 @@ class LucasNoticeService
             ->toString();
 
         return $value;
+    }
+
+    private function defaultTechnicianId(): ?int
+    {
+        $configuredId = config('services.lucas.default_technician_id');
+
+        if ($configuredId) {
+            return (int) $configuredId;
+        }
+
+        return User::query()
+            ->where('role', 'technician')
+            ->where('is_active', true)
+            ->where('name', 'like', 'Jose%')
+            ->value('id');
     }
 
     private function normalizePriority(string $priority): string

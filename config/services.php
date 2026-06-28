@@ -14,4 +14,8 @@ return [
         'bot_token' => env('TELEGRAM_BOT_TOKEN'),
         'avisos_chat_id' => env('TELEGRAM_AVISOS_CHAT_ID'),
     ],
+
+    'lucas' => [
+        'default_technician_id' => env('LUCAS_DEFAULT_TECHNICIAN_ID'),
+    ],
 ];
