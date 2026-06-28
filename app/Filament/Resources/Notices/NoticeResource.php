@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Notices;
 
 use App\Filament\Resources\Notices\Pages\ManageNotices;
+use App\Filament\Resources\Notices\Pages\ViewNotice;
 use App\Models\Installation;
 use App\Models\Notice;
 use App\Models\User;
@@ -11,6 +12,7 @@ use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Notifications\Notification as FilamentNotification;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
@@ -151,6 +153,7 @@ class NoticeResource extends Resource
                             ->send();
                     })
                     ->hidden(fn (Notice $record): bool => $record->workOrder()->exists() || in_array($record->status, ['completed', 'resolved', 'cancelled'], true)),
+                ViewAction::make(),
                 EditAction::make(),
             ])
             ->toolbarActions([
@@ -164,6 +167,7 @@ class NoticeResource extends Resource
     {
         return [
             'index' => ManageNotices::route('/'),
+            'view' => ViewNotice::route('/{record}'),
         ];
     }
 

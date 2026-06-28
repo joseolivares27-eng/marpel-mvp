@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Filament\Resources\Notices\NoticeResource;
 use App\Models\Notice;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -25,7 +26,8 @@ class TelegramNotifier
             ."📍 Direccion: {$this->safe($notice->installation?->address)}\n"
             ."📞 Telefono: {$this->safe($notice->contact_phone ?: $notice->reported_by)}\n"
             ."🔧 Averia: {$this->safe($notice->description)}\n"
-            ."⏰ Fecha/Hora: ".now()->format('d/m/Y H:i');
+            ."⏰ Fecha/Hora: ".now()->format('d/m/Y H:i')
+            ."\n\n🔗 ".NoticeResource::getUrl('view', ['record' => $notice]);
 
         try {
             Http::post("https://api.telegram.org/bot{$token}/sendMessage", [
