@@ -60,6 +60,7 @@ class CustomerResource extends Resource
             Textarea::make('equipment_description')->label('Descripcion equipos')->columnSpanFull(),
             Select::make('status')->label('Estado')->options([
                 'active' => 'Activo',
+                'prospect' => 'Prospect',
                 'inactive' => 'Inactivo',
             ])->default('active')->required(),
             TextInput::make('drive_folder_url')
@@ -136,7 +137,22 @@ class CustomerResource extends Resource
                     ->formatStateUsing(fn (?string $state): string => $state ? 'Abrir' : '-')
                     ->url(fn (Customer $record): ?string => $record->drive_folder_url)
                     ->openUrlInNewTab(),
-                TextColumn::make('status')->label('Estado')->badge()->sortable(),
+                TextColumn::make('status')
+                    ->label('Estado')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => match ($state) {
+                        'active' => 'Activo',
+                        'prospect' => 'Prospect',
+                        'inactive' => 'Inactivo',
+                        default => $state ?? '-',
+                    })
+                    ->color(fn (?string $state): string => match ($state) {
+                        'active' => 'success',
+                        'prospect' => 'warning',
+                        'inactive' => 'gray',
+                        default => 'gray',
+                    })
+                    ->sortable(),
                 TextColumn::make('created_at')->label('Alta')->date()->sortable(),
             ])
             ->recordActions([
