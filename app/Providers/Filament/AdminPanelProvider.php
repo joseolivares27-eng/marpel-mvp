@@ -13,6 +13,8 @@ use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
+use Illuminate\Support\HtmlString;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -38,6 +40,22 @@ class AdminPanelProvider extends PanelProvider
                 'warning' => Color::hex('#F2B705'),
                 'gray' => Color::Slate,
             ])
+            ->renderHook(
+                PanelsRenderHook::HEAD_END,
+                fn (): HtmlString => new HtmlString(<<<'HTML'
+                    <script>
+                        if ('serviceWorker' in navigator) {
+                            navigator.serviceWorker.getRegistrations().then((registrations) => {
+                                registrations.forEach((registration) => {
+                                    if (!registration.scope.includes('/tecnico')) {
+                                        registration.unregister();
+                                    }
+                                });
+                            });
+                        }
+                    </script>
+                    HTML),
+            )
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->pages([
                 AdminDashboard::class,

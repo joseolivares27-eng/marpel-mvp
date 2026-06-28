@@ -3,9 +3,9 @@ import axios from 'axios';
 window.axios = axios;
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
-if ('serviceWorker' in navigator) {
+if ('serviceWorker' in navigator && window.location.pathname.startsWith('/tecnico')) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js').catch(() => {});
+        navigator.serviceWorker.register('/service-worker.js', { scope: '/tecnico/' }).catch(() => {});
     });
 }
 
