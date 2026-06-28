@@ -36,6 +36,10 @@ class Notice extends Model
             app(\App\Services\GoogleCalendarService::class)->pushEvent($notice);
         });
 
+        static::created(function (Notice $notice): void {
+            app(\App\Services\TelegramNotifier::class)->notifyNewNotice($notice);
+        });
+
         static::deleting(function (Notice $notice): void {
             app(\App\Services\GoogleCalendarService::class)->deleteEvent($notice);
 

@@ -4,7 +4,6 @@ namespace App\Filament\Resources\Notices\Pages;
 
 use App\Filament\Resources\Notices\NoticeResource;
 use App\Models\Notice;
-use App\Services\TelegramNotifier;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ManageRecords;
 use Filament\Schemas\Components\Tabs\Tab;
@@ -39,11 +38,7 @@ class ManageNotices extends ManageRecords
                 ->using(function (array $data, string $model): Model {
                     $data['status'] = 'pending';
 
-                    $notice = $model::create($data);
-
-                    app(TelegramNotifier::class)->notifyManualNotice($notice);
-
-                    return $notice;
+                    return $model::create($data);
                 }),
         ];
     }

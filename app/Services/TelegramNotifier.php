@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Log;
 
 class TelegramNotifier
 {
-    public function notifyManualNotice(Notice $notice): void
+    public function notifyNewNotice(Notice $notice): void
     {
         $token = config('services.telegram.bot_token');
         $chatId = config('services.telegram.avisos_chat_id');
@@ -20,7 +20,7 @@ class TelegramNotifier
 
         $notice->loadMissing(['customer', 'installation']);
 
-        $text = "📝 Aviso creado desde oficina\n\n"
+        $text = "📝 Nuevo aviso en el CRM\n\n"
             ."👤 Cliente: {$this->safe($notice->customer?->legal_name)}\n"
             ."🏢 Instalacion: {$this->safe($notice->installation?->name)}\n"
             ."📍 Direccion: {$this->safe($notice->installation?->address)}\n"
