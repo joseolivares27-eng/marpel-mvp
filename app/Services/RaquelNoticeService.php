@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Models\Notice;
 
-class LucasNoticeService extends ChannelNoticeService
+class RaquelNoticeService extends ChannelNoticeService
 {
     /**
      * @param array{
@@ -21,18 +21,18 @@ class LucasNoticeService extends ChannelNoticeService
      *     notas?: string|null
      * } $payload
      */
-    public function createFromLucasPayload(array $payload): Notice
+    public function createFromRaquelPayload(array $payload): Notice
     {
         return $this->createFromPayload($payload);
     }
 
     protected function defaultChannel(): string
     {
-        return 'whatsapp';
+        return 'telefono';
     }
 
     protected function sourceLabel(): string
     {
-        return 'Lucas';
+        return 'Raquel';
     }
 }
